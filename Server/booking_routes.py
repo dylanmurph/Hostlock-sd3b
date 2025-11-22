@@ -1,8 +1,39 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from .models import db, BnB, Booking, User, UserBooking, Fob, FobBooking
+import json
 
 booking_bp = Blueprint("booking", __name__)
+
+# GET CURRENT GUEST BOOKINGS
+@booking_bp.route("/guest/get/booking", methods=["GET"])
+@jwt_required()
+def get_guest_bookings():
+    identity = json.loads(get_jwt_identity())
+    user_id = identity["id"]
+
+    guest = User.query.filter_by(id=user_id).first()
+    if not guest:
+        return jsonify([]), 200
+
+    # Step 1: Get UserBooking entries
+    user_bookings = guest.bookings.all()
+
+    # Step 2: Extract Booking objects
+    bookings = [ub.booking for ub in user_bookings]
+
+    data = []
+    for b in bookings:
+        data.append({
+            "bookingCode": b.booking_code,
+            "checkIn": b.check_in_time.strftime("%Y-%m-%d"),
+            "checkInTime": b.check_in_time.strftime("%H:%M"),
+            "checkOut": b.check_out_time.strftime("%Y-%m-%d"),
+            "checkOutTime": b.check_out_time.strftime("%H:%M"),
+        })
+
+    return jsonify(data), 200
+
 
 @booking_bp.route("/bookings", methods=["POST"])
 @jwt_required()
