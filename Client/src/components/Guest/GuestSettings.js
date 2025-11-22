@@ -1,20 +1,13 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
 import {
   Shield,
   Bell,
   User,
   Trash2,
   LogOut,
-  Home as HomeIcon,
-  Calendar,
-  Settings,
 } from "lucide-react";
 
 export function GuestSettings({ onLogout }) {
-  const location = useLocation();
-  const isActive = (path) => location.pathname === path;
-
   const handleLogout = () => {
     if (onLogout) {
       onLogout(); // calls App.handleLogout -> clears token + user
@@ -242,54 +235,8 @@ export function GuestSettings({ onLogout }) {
           </section>
         </div>
       </main>
-
-      {/* BOTTOM NAV */}
-      <nav className="sticky bottom-0 inset-x-0 bg-white border-t shadow-sm">
-        <div className="max-w-sm mx-auto flex justify-between px-6 py-2 text-xs">
-          <NavItem
-            to="/guest/home"
-            label="Home"
-            icon={HomeIcon}
-            active={isActive("/guest/home")}
-          />
-          <NavItem
-            to="/guest/bookings"
-            label="Bookings"
-            icon={Calendar}
-            active={isActive("/guest/bookings")}
-          />
-          <NavItem
-            to="/guest/alerts"
-            label="Alerts"
-            icon={Bell}
-            active={isActive("/guest/alerts")}
-            showDot
-          />
-          <NavItem
-            to="/guest/settings"
-            label="Settings"
-            icon={Settings}
-            active={isActive("/guest/settings")}
-          />
-        </div>
-      </nav>
     </div>
   );
 }
-
-const NavItem = ({ to, label, icon: Icon, active, showDot }) => (
-  <Link
-    to={to}
-    className={`relative flex flex-col items-center gap-0.5 ${
-      active ? "text-sky-600" : "text-slate-500"
-    }`}
-  >
-    <Icon className="w-5 h-5" />
-    {showDot && (
-      <span className="absolute -top-0.5 right-3 w-2 h-2 rounded-full bg-red-500" />
-    )}
-    <span>{label}</span>
-  </Link>
-);
 
 export default GuestSettings;

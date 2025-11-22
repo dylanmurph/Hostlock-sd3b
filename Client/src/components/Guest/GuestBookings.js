@@ -1,11 +1,8 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
 import { bookings, accessHistory } from "../../mockData";
-import { MapPin, Calendar, Clock, Edit, XCircle, History as HistoryIcon, Home as HomeIcon, Bell, Settings} from "lucide-react";
+import { MapPin, Calendar, Clock, Edit, XCircle, History as HistoryIcon } from "lucide-react";
 
 function GuestBookings() {
-  const location = useLocation();
-  const isActive = (path) => location.pathname === path;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -29,8 +26,8 @@ function GuestBookings() {
                 booking.status === "Active"
                   ? "bg-emerald-100 text-emerald-700"
                   : booking.status === "Completed"
-                  ? "bg-slate-100 text-slate-700"
-                  : "bg-red-100 text-red-700";
+                    ? "bg-slate-100 text-slate-700"
+                    : "bg-red-100 text-red-700";
 
               return (
                 <div
@@ -143,11 +140,10 @@ function GuestBookings() {
                                 <div>
                                   <div className="flex items-center gap-2">
                                     <span
-                                      className={`w-2 h-2 rounded-full ${
-                                        log.status === "Success"
+                                      className={`w-2 h-2 rounded-full ${log.status === "Success"
                                           ? "bg-green-500"
                                           : "bg-red-500"
-                                      }`}
+                                        }`}
                                     />
                                     <span className="text-xs">
                                       {log.timestamp}
@@ -158,11 +154,10 @@ function GuestBookings() {
                                   </p>
                                 </div>
                                 <span
-                                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                                    log.status === "Success"
+                                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${log.status === "Success"
                                       ? "bg-emerald-100 text-emerald-700"
                                       : "bg-red-100 text-red-700"
-                                  }`}
+                                    }`}
                                 >
                                   {log.status}
                                 </span>
@@ -185,54 +180,8 @@ function GuestBookings() {
           </div>
         </div>
       </main>
-
-      {/* BOTTOM NAV */}
-      <nav className="sticky bottom-0 inset-x-0 bg-white border-t shadow-sm">
-        <div className="max-w-sm mx-auto flex justify-between px-6 py-2 text-xs">
-          <NavItem
-            to="/guest/home"
-            label="Home"
-            icon={HomeIcon}
-            active={isActive("/guest/home")}
-          />
-          <NavItem
-            to="/guest/bookings"
-            label="Bookings"
-            icon={Calendar}
-            active={isActive("/guest/bookings")}
-          />
-          <NavItem
-            to="/guest/alerts"
-            label="Alerts"
-            icon={Bell}
-            active={isActive("/guest/alerts")}
-            showDot
-          />
-          <NavItem
-            to="/guest/settings"
-            label="Settings"
-            icon={Settings}
-            active={isActive("/guest/settings")}
-          />
-        </div>
-      </nav>
     </div>
   );
 }
-
-const NavItem = ({ to, label, icon: Icon, active, showDot }) => (
-  <Link
-    to={to}
-    className={`relative flex flex-col items-center gap-0.5 ${
-      active ? "text-sky-600" : "text-slate-500"
-    }`}
-  >
-    <Icon className="w-5 h-5" />
-    {showDot && (
-      <span className="absolute -top-0.5 right-3 w-2 h-2 rounded-full bg-red-500" />
-    )}
-    <span>{label}</span>
-  </Link>
-);
 
 export default GuestBookings;

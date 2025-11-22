@@ -9,8 +9,7 @@ booking_bp = Blueprint("booking", __name__)
 @booking_bp.route("/guest/get/booking", methods=["GET"])
 @jwt_required()
 def get_guest_bookings():
-    identity = json.loads(get_jwt_identity())
-    user_id = identity["id"]
+    user_id = int(get_jwt_identity())
 
     guest = User.query.filter_by(id=user_id).first()
     if not guest:
