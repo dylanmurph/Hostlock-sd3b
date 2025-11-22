@@ -26,6 +26,7 @@ import HostGuests from "./components/Host/HostGuests";
 import HostAlerts from "./components/Host/HostAlerts";
 import HostLogs from "./components/Host/HostLogs";
 import HostSettings from "./components/Host/HostSettings";
+import HostLayout from "./components/Host/HostLayout";
 
 // helper: where should this user land?
 const getHomePath = (user) => {

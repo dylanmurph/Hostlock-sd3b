@@ -176,9 +176,6 @@ export function HostLogs() {
           })}
         </div>
       </main>
-
-      {/* BOTTOM NAV */}
-      <HostNav />
     </div>
   );
 }

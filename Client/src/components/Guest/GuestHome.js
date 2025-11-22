@@ -1,6 +1,7 @@
 import React, { useEffect } from "react"
 import { Link, useLocation } from "react-router-dom"
 import { Calendar, Bell, Settings, MapPin, Home } from "lucide-react"
+import api from "../../api"
 
 // TEMP – swap with real data later
 const guestData = {

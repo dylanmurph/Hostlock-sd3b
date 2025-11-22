@@ -121,9 +121,6 @@ export function HostAlerts() {
           })}
         </div>
       </main>
-
-      {/* BOTTOM NAV */}
-    	<HostNav />
     </div>
   );
 }

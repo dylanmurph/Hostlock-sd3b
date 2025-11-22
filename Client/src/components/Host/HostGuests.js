@@ -266,9 +266,6 @@ export function HostGuests() {
           })}
         </div>
       </main>
-
-      {/* BOTTOM NAV */}
-    	<HostNav />
     </div>
   );
 }

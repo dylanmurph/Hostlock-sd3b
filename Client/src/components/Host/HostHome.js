@@ -142,9 +142,6 @@
             </div>
           </div>
         </main>
-
-		{/* BOTTOM NAV */}
-    	<HostNav />
       </div>
     )
   }

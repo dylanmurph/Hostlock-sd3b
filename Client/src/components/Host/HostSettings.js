@@ -271,9 +271,6 @@ export function HostSettings({ onLogout }) {
           </div>
         </section>
       </main>
-
-      {/* BOTTOM NAV */}
-    	<HostNav />
     </div>
   );
 }
