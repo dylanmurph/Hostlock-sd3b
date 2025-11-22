@@ -14,7 +14,6 @@ db = SQLAlchemy()  # This is for the database
 bcrypt = Bcrypt()  # For password hashing
 jwt = JWTManager()  # For managing JSON Web Tokens (JWT)
 
-
 def create_app():
     app = Flask(__name__)
 
@@ -30,10 +29,14 @@ def create_app():
     )
 
     # Enable CORS for both production and local environments
+    # Allow Authorization header so JWT tokens in the Authorization: Bearer <token>
+    # header are accepted by the browser when calling protected endpoints.
     CORS(
         app,
-        origins=["https://www.hostlocksd3b.online", "http://localhost:3000"],
+        origins=["https://www.hostlocksd3b.online"],
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization"],
+        supports_credentials=True,
     )
 
     # Initialize the extensions with the app
@@ -52,8 +55,6 @@ def create_app():
     AccessLog,
     TamperAlert,
 )
-
-
 
     # Create all tables in the database if they don't already exist
     with app.app_context():
@@ -74,19 +75,10 @@ def create_app():
             )  # Print any error if table creation fails
 
     # ------------------------------------------------------------
-    # REGISTER EXISTING BLUEPRINTS
+    # REGISTER BLUEPRINTS
     # ------------------------------------------------------------
 
     from .auth import auth_bp
-    from .dbroute import db_bp
-
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(db_bp)
-
-    # ------------------------------------------------------------
-    # REGISTER NEW API BLUEPRINTS (ADDED CLEANLY BELOW)
-    # ------------------------------------------------------------
-
     from .bnb_routes import bnb_bp
     from .booking_routes import booking_bp
     from .fob_routes import fob_bp
@@ -94,6 +86,7 @@ def create_app():
     from .tamper_routes import tamper_bp
     from .hardware_routes import hardware_bp
 
+    app.register_blueprint(auth_bp)
     app.register_blueprint(bnb_bp)
     app.register_blueprint(booking_bp)
     app.register_blueprint(fob_bp)
