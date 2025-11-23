@@ -13,13 +13,12 @@ export function GuestSettings({ onLogout }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
 
-  // Load user photo from localStorage
   useEffect(() => {
     const userStr = localStorage.getItem("user");
     if (userStr) {
       const user = JSON.parse(userStr);
       if (user.photo) {
-        setPreviewUrl(`https://www.hostlocksd3b.online/${user.photo}`);
+        setPreviewUrl(`https://www.hostlocksd3b.online/uploads/profile_images/user_2_logo192.png`);
       }
     }
   }, []);

@@ -15,7 +15,7 @@ bcrypt = Bcrypt()  # For password hashing
 jwt = JWTManager()  # For managing JSON Web Tokens (JWT)
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__, static_url_path="/uploads", static_folder="uploads")
 
     # Get database and JWT secret from the environment variables
     database_url = os.getenv("DATABASE_URL")
