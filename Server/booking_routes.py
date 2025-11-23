@@ -149,9 +149,9 @@ def create_booking():
     booking_code = data.get("bookingCode")
     check_in = data.get("checkIn")
     check_out = data.get("checkOut")
-    property_name = data.get("property")
+    property_id = data.get("property")  # <-- this is now the BnB ID
 
-    if not all([email, booking_code, check_in, check_out, property_name]):
+    if not all([email, booking_code, check_in, check_out, property_id]):
         return jsonify({"error": "Missing required fields"}), 400
 
     # Find or create user
@@ -161,8 +161,8 @@ def create_booking():
         db.session.add(user)
         db.session.commit()
 
-    # Find BnB
-    bnb = BnB.query.filter_by(name=property_name).first()
+    # Find BnB by ID
+    bnb = BnB.query.get(property_id)  # ✅ lookup by ID
     if not bnb:
         return jsonify({"error": "Property not found"}), 404
 
@@ -186,8 +186,8 @@ def create_booking():
         Fob.query
         .outerjoin(FobBooking)
         .filter(
-            (FobBooking.id == None) |  # Fob has no bookings at all
-            ((FobBooking.active_until < booking.check_in_time) | (FobBooking.active_from > booking.check_out_time))  # No overlap
+            (FobBooking.id == None) |
+            ((FobBooking.active_until < booking.check_in_time) | (FobBooking.active_from > booking.check_out_time))
         )
         .first()
     )
@@ -204,7 +204,7 @@ def create_booking():
         db.session.commit()
         fob_uid = fob.uid
     else:
-        fob_uid = None  # No available Fob
+        fob_uid = None
 
     return jsonify({
         "bookingId": booking.id,
