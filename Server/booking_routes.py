@@ -34,24 +34,32 @@ def get_guest_bookings():
 
     return jsonify(data), 200
 
+from datetime import datetime, timezone
+
 @booking_bp.route("/host/get/bookings", methods=["GET"])
 @jwt_required()
 def get_host_bookings():
     host_id = int(get_jwt_identity())
 
-    # Fetch all BnBs hosted by this user
     bnbs = BnB.query.filter_by(host_id=host_id).all()
     if not bnbs:
         return jsonify([]), 200
 
+    now = datetime.now(timezone.utc)
     data = []
 
     for bnb in bnbs:
-        # Iterate over all bookings for this BnB
         for booking in bnb.bookings:
-            # Iterate over all guests linked to this booking
-            for user_booking in booking.user_links:  # user_links is the UserBooking relationship
+            for user_booking in booking.user_links:
                 guest = user_booking.user
+                # Compute guest status
+                if booking.check_in_time <= now <= booking.check_out_time:
+                    status = "Active"
+                elif now < booking.check_in_time:
+                    status = "Upcoming"
+                else:
+                    status = "Checked Out"
+
                 data.append({
                     "guestId": guest.id,
                     "guestName": guest.name,
@@ -62,7 +70,8 @@ def get_host_bookings():
                     "checkOutTime": booking.check_out_time.strftime("%H:%M"),
                     "bnbId": bnb.id,
                     "bnbName": bnb.name,
-                    "isPrimaryGuest": user_booking.is_primary_guest
+                    "isPrimaryGuest": user_booking.is_primary_guest,
+                    "status": status
                 })
 
     return jsonify(data), 200
