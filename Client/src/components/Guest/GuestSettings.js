@@ -16,20 +16,19 @@ export function GuestSettings({ onLogout }) {
   const [profileError, setProfileError] = useState(null);
   const [profileSuccess, setProfileSuccess] = useState(null);
 
-  // Load profile photo (from localStorage) + profile data (from /me)
+  // Load profile photo (from localStorage/backend) + profile data (from /me)
   useEffect(() => {
     const init = async () => {
-      // Photo from localStorage (if present)
+      // 1) Photo from localStorage (if present)
       const userStr = localStorage.getItem("user");
       if (userStr) {
         const user = JSON.parse(userStr);
         if (user.photo) {
-          // use the stored URL instead of hardcoded
           setPreviewUrl(user.photo);
         }
       }
 
-      // Profile from backend
+      // 2) Profile (and photo) from backend
       try {
         setLoadingProfile(true);
         setProfileError(null);
@@ -40,8 +39,13 @@ export function GuestSettings({ onLogout }) {
           email: res.data.email || "",
           contact_number: res.data.contact_number || "",
         });
+
+        if (res.data.photo_path) {
+          // override with backend photo if available
+          setPreviewUrl(`https://www.hostlocksd3b.online/${res.data.photo_path}`);
+        }
       } catch (err) {
-        console.error("Failed to load profile:", err);
+        console.error("Failed to load profile:", err.response || err);
         setProfileError("Failed to load profile.");
       } finally {
         setLoadingProfile(false);
@@ -93,7 +97,7 @@ export function GuestSettings({ onLogout }) {
         contact_number: updated.contact_number || "",
       });
 
-      // Keep localStorage "user" in sync (optional but nice)
+      // Keep localStorage "user" in sync
       const userStr = localStorage.getItem("user");
       if (userStr) {
         const user = JSON.parse(userStr);
@@ -105,7 +109,7 @@ export function GuestSettings({ onLogout }) {
 
       setProfileSuccess("Profile updated successfully.");
     } catch (err) {
-      console.error("Failed to update profile:", err);
+      console.error("Failed to update profile:", err.response || err);
       setProfileError("Failed to update profile.");
     } finally {
       setSavingProfile(false);
@@ -132,7 +136,7 @@ export function GuestSettings({ onLogout }) {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // Assuming backend returns something like { file: "uploads/profile_images/..." }
+      // Assuming backend returns { file: "uploads/profile_images/..." }
       const photoUrl = `https://www.hostlocksd3b.online/${res.data.file}`;
       setPreviewUrl(photoUrl);
 
@@ -140,12 +144,13 @@ export function GuestSettings({ onLogout }) {
       if (userStr) {
         const user = JSON.parse(userStr);
         user.photo = photoUrl;
+        user.photo_path = res.data.file;
         localStorage.setItem("user", JSON.stringify(user));
       }
 
       alert("Profile image updated!");
     } catch (err) {
-      console.error("Upload error:", err);
+      console.error("Upload error:", err.response || err);
       alert("Failed to upload image.");
     }
   };
@@ -290,13 +295,15 @@ export function GuestSettings({ onLogout }) {
                     />
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={savingProfile}
-                    className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-700 disabled:opacity-60"
-                  >
-                    {savingProfile ? "Saving..." : "Save Changes"}
-                  </button>
+                  <div className="flex justify-center">
+                    <button
+                      type="submit"
+                      disabled={savingProfile}
+                      className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-700 disabled:opacity-60"
+                    >
+                      {savingProfile ? "Saving..." : "Save Changes"}
+                    </button>
+                  </div>
                 </>
               )}
             </form>

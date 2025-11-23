@@ -1,16 +1,5 @@
 from flask import Blueprint, request, jsonify
-from .models import (
-    db,
-    User,
-    BnB,
-    Booking,
-    UserBooking,
-    Fob,
-    FobBooking,
-    AccessLog,
-    TamperAlert,
-    UserRole,
-)
+from .models import (db, User, BnB, Booking, UserBooking, Fob, FobBooking, AccessLog, TamperAlert, UserRole,)
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from datetime import datetime
 import re
@@ -21,6 +10,7 @@ CONTACT_REGEX = r"^\+?\d{7,15}$"
 VALID_ROLES = ["guest", "host", "admin"]
 
 auth_bp = Blueprint("auth", __name__)
+
 
 @auth_bp.route("/me", methods=["GET"])
 @jwt_required()
@@ -38,10 +28,12 @@ def me():
                 "email": user.email,
                 "contact_number": user.contact_number,
                 "role": user.role,
+                "photo_path": user.photo_path,
             }
         ),
         200,
     )
+
 
 @auth_bp.route("/me", methods=["PUT"])
 @jwt_required()
@@ -90,10 +82,12 @@ def update_me():
                 "email": user.email,
                 "contact_number": user.contact_number,
                 "role": user.role,
+                "photo_path": user.photo_path,
             }
         ),
         200,
     )
+
 
 @auth_bp.route("/register", methods=["POST"])
 def register():
@@ -141,7 +135,7 @@ def register():
                     "name": user.name,
                     "email": user.email,
                     "role": user.role,
-                    "photo_path": user.photo_path
+                    "photo_path": user.photo_path,
                 }
             ),
             201,
@@ -179,7 +173,7 @@ def login():
                 "name": user.name,
                 "email": user.email,
                 "role": user.role,
-                "photo_path": user.photo_path
+                "photo_path": user.photo_path,
             }
         ),
         200,
