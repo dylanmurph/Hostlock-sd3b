@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Shield,
   Bell,
@@ -13,16 +13,24 @@ export function GuestSettings({ onLogout }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
 
-  const handleLogout = () => {
-    if (onLogout) {
-      onLogout();
+  // Load user photo from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      if (user.photo) {
+        setPreviewUrl(user.photo);
+      }
     }
+  }, []);
+
+  const handleLogout = () => {
+    if (onLogout) onLogout();
   };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     setSelectedImage(file);
     setPreviewUrl(URL.createObjectURL(file));
   };
@@ -34,11 +42,21 @@ export function GuestSettings({ onLogout }) {
     formData.append("image", selectedImage);
 
     try {
-      const res = await api.post(`/booking/uploadImage`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+      const res = await api.post("/booking/uploadImage", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
+
+      // Assuming backend returns just filename
+      const photoUrl = `https://www.hostlocksd3b.online/${res.data.file}`;
+      setPreviewUrl(photoUrl);
+
+      // Update localStorage
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        user.photo = photoUrl;
+        localStorage.setItem("user", JSON.stringify(user));
+      }
 
       alert("Profile image updated!");
     } catch (err) {
@@ -49,7 +67,6 @@ export function GuestSettings({ onLogout }) {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* MAIN CONTENT */}
       <main className="flex-1 px-4 pt-4 pb-24">
         <div className="max-w-4xl mx-auto space-y-6">
           <div>
@@ -244,55 +261,30 @@ export function GuestSettings({ onLogout }) {
             <div className="px-4 py-4 space-y-4 text-sm">
               <div className="flex items-center justify-between">
                 <div>
-                  <label
-                    htmlFor="push"
-                    className="text-xs font-medium text-slate-700"
-                  >
+                  <label htmlFor="push" className="text-xs font-medium text-slate-700">
                     Push Notifications
                   </label>
-                  <p className="text-xs text-slate-500">
-                    Receive alerts on your device
-                  </p>
+                  <p className="text-xs text-slate-500">Receive alerts on your device</p>
                 </div>
-                <input
-                  id="push"
-                  type="checkbox"
-                  defaultChecked
-                  className="h-4 w-4"
-                />
+                <input id="push" type="checkbox" defaultChecked className="h-4 w-4" />
               </div>
 
               <div className="flex items-center justify-between">
                 <div>
-                  <label
-                    htmlFor="email-notif"
-                    className="text-xs font-medium text-slate-700"
-                  >
+                  <label htmlFor="email-notif" className="text-xs font-medium text-slate-700">
                     Email Notifications
                   </label>
-                  <p className="text-xs text-slate-500">
-                    Get updates via email
-                  </p>
+                  <p className="text-xs text-slate-500">Get updates via email</p>
                 </div>
-                <input
-                  id="email-notif"
-                  type="checkbox"
-                  defaultChecked
-                  className="h-4 w-4"
-                />
+                <input id="email-notif" type="checkbox" defaultChecked className="h-4 w-4" />
               </div>
 
               <div className="flex items-center justify-between">
                 <div>
-                  <label
-                    htmlFor="sms"
-                    className="text-xs font-medium text-slate-700"
-                  >
+                  <label htmlFor="sms" className="text-xs font-medium text-slate-700">
                     SMS Notifications
                   </label>
-                  <p className="text-xs text-slate-500">
-                    Receive text messages
-                  </p>
+                  <p className="text-xs text-slate-500">Receive text messages</p>
                 </div>
                 <input id="sms" type="checkbox" className="h-4 w-4" />
               </div>
