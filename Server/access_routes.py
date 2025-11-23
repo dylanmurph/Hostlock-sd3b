@@ -24,12 +24,14 @@ def get_booking_history(booking_code):
     data = []
     for log in logs:
         data.append({
-            "timestamp": log.time_logged.strftime("%Y-%m-%d %H:%M:%S"),
+            "timestamp": log.time_logged.strftime("%Y-%m-%d %H:%M:%S") if log.time_logged else None,
             "method": log.event_type or "Unknown",
-            "location": booking.bnb.property_address if booking.bnb else "Unknown",
+            "location": log.bnb.name if log.bnb else "Unknown",
             "status": log.match_result or "Unknown",
-            "confidence": log.face_confidence,
-            "snapshot": log.snapshot_path
+            "confidence": log.face_confidence if log.face_confidence is not None else None,
+            "snapshot": log.snapshot_path if log.snapshot_path else None,
+            "fob": log.fob.label if log.fob else None, 
+            "user": log.recognized_user.name if log.recognized_user else None
         })
 
     return jsonify(data), 200
