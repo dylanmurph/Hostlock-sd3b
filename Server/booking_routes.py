@@ -220,20 +220,6 @@ def create_booking():
         "status": "Active"
     }), 201
 
-@booking_bp.route("/bookings", methods=["POST"])
-@jwt_required()
-def create_booking():
-    """
-    Create a new booking for a BnB.
-    TODO:
-    - Validate BnB, time window, guest IDs (must exist as users).
-    - Create Booking row.
-    - Create UserBooking rows for each guest.
-    - Auto-assign fobs via FobBooking for the booking window.
-    """
-    return jsonify({}), 201
-
-
 @booking_bp.route("/bookings/<int:booking_id>", methods=["GET"])
 @jwt_required()
 def get_booking(booking_id):
