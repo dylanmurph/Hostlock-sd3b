@@ -29,6 +29,7 @@ def get_guest_bookings():
             "checkInTime": b.check_in_time.strftime("%H:%M"),
             "checkOut": b.check_out_time.strftime("%Y-%m-%d"),
             "checkOutTime": b.check_out_time.strftime("%H:%M"),
+            "bnb_id": b.bnb_id
         })
 
     return jsonify(data), 200
