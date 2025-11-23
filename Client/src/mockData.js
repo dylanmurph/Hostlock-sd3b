@@ -73,49 +73,6 @@ export const guestAlerts = [
   },
 ];
 
-export const bookings = [
-  {
-    id: 1,
-    propertyName: "Dundalk Apartment",
-    checkIn: "2025-11-20",
-    checkOut: "2025-11-25",
-    bookingCode: "ABC12345",
-    status: "Active", // "Active" | "Completed" | "Cancelled"
-  },
-  {
-    id: 2,
-    propertyName: "City Studio",
-    checkIn: "2025-10-01",
-    checkOut: "2025-10-05",
-    bookingCode: "XYZ98765",
-    status: "Completed",
-  },
-];
-
-export const accessHistory = [
-  {
-    id: 1,
-    timestamp: "2025-11-20 15:01",
-    method: "NFC",
-    location: "Lobby Door",
-    status: "Success",
-  },
-  {
-    id: 2,
-    timestamp: "2025-11-20 15:03",
-    method: "PIN",
-    location: "Apartment Door",
-    status: "Success",
-  },
-  {
-    id: 3,
-    timestamp: "2025-11-19 21:17",
-    method: "NFC",
-    location: "Lobby Door",
-    status: "Failed",
-  },
-];
-
 // ----- HOST -----
 export const hostAlerts = [
   {
@@ -131,23 +88,6 @@ export const hostAlerts = [
     time: "3 hours ago",
     type: "warning",
     status: "Unread",
-  },
-];
-
-export const hostGuests = [
-  {
-    id: 1,
-    name: "Emily Clark",
-    email: "emily@example.com",
-    status: "Checked-in",
-    lastVisit: "2025-11-20",
-  },
-  {
-    id: 2,
-    name: "Michael Walsh",
-    email: "michael@example.com",
-    status: "Upcoming",
-    lastVisit: "2025-12-01",
   },
 ];
 

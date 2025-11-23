@@ -22,26 +22,78 @@ VALID_ROLES = ["guest", "host", "admin"]
 
 auth_bp = Blueprint("auth", __name__)
 
-
 @auth_bp.route("/me", methods=["GET"])
 @jwt_required()
 def me():
-    identity = get_jwt_identity()  # {"id": ..., "role": ...}
-    user = User.query.get(identity["id"])
+    user_id = get_jwt_identity()
+    user = User.query.get(int(user_id))
     if not user:
         return jsonify({"message": "User not found"}), 404
+
     return (
         jsonify(
             {
                 "user_id": user.id,
                 "name": user.name,
                 "email": user.email,
+                "contact_number": user.contact_number,
                 "role": user.role,
             }
         ),
         200,
     )
 
+@auth_bp.route("/me", methods=["PUT"])
+@jwt_required()
+def update_me():
+    user_id = get_jwt_identity()
+    user = User.query.get(int(user_id))
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    data = request.get_json(force=True) or {}
+
+    name = (data.get("name") or "").strip()
+    email = (data.get("email") or "").lower().strip()
+    contact_number = (data.get("contact_number") or "").strip()
+
+    if not name or not email:
+        return jsonify({"message": "Name and email are required"}), 400
+    if not re.match(EMAIL_REGEX, email):
+        return jsonify({"message": "Invalid email format"}), 400
+    if contact_number and not re.match(CONTACT_REGEX, contact_number):
+        return jsonify({"message": "Invalid contact number format"}), 400
+
+    # check if email used by someone else
+    existing = User.query.filter(
+        User.email == email,
+        User.id != user.id
+    ).first()
+    if existing:
+        return jsonify({"message": "Email already registered"}), 400
+
+    user.name = name
+    user.email = email
+    user.contact_number = contact_number or None
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Error updating profile", "error": str(e)}), 500
+
+    return (
+        jsonify(
+            {
+                "user_id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "contact_number": user.contact_number,
+                "role": user.role,
+            }
+        ),
+        200,
+    )
 
 @auth_bp.route("/register", methods=["POST"])
 def register():

@@ -1,13 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  Building2,
-  UserCircle,
-  Lock,
-  Mail,
-  User,
-  Phone,
-} from "lucide-react";
+import { Building2, UserCircle, Lock, Mail, User, Phone,} from "lucide-react";
 import api from "../../api";
 import logoImage from "../../logo.svg";
 
