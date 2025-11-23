@@ -5,9 +5,14 @@ import {
   User,
   Trash2,
   LogOut,
+  Camera,
 } from "lucide-react";
+import api from "../../api";
 
 export function GuestSettings({ onLogout }) {
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+
   const handleLogout = () => {
     if (onLogout) {
       onLogout();
