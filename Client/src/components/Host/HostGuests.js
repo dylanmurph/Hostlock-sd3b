@@ -71,11 +71,14 @@ export function HostGuests() {
     }
   };
 
-  const filteredGuests = guests.filter(
-    (guest) =>
-      guest.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      guest.bookingCode.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredGuests = guests.filter((guest) => {
+    const email = guest.email || "";
+    const bookingCode = guest.bookingCode || "";
+    return (
+      email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      bookingCode.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
 
   if (loading) return <div className="p-6 text-center">Loading guests...</div>;
 
