@@ -125,13 +125,100 @@ def upload_profile_image():
         "file_path": file_path
     }), 200
     
-@booking_bp.route("/booking/<int:user_id>/photo")
-def get_user_photo(user_id):
+@booking_bp.route("/booking/getImage", methods=["GET"])
+@jwt_required()
+def get_user_profile():
+    user_id = int(get_jwt_identity())
     user = User.query.get(user_id)
-    if not user or not user.photo_path:
-        return jsonify({"error": "No photo"}), 404
+    if not user:
+        return jsonify({"error": "User not found"}), 404
 
-    return send_file(user.photo_path, mimetype="image/jpeg")
+    return jsonify({
+        "name": user.name,
+        "email": user.email,
+        "photo_path": user.photo_path
+    }), 200
+    
+from flask import Blueprint, request, jsonify
+from .models import db, User, Booking, BnB, UserBooking, Fob, FobBooking
+from datetime import datetime, timezone
+
+booking_bp = Blueprint("booking_bp", __name__)
+
+@booking_bp.route("/booking/createBooking", methods=["POST"])
+def create_booking():
+    data = request.json
+    email = data.get("email")
+    booking_code = data.get("bookingCode")
+    check_in = data.get("checkIn")
+    check_out = data.get("checkOut")
+    property_name = data.get("property")
+
+    if not all([email, booking_code, check_in, check_out, property_name]):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    # Find or create user
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        user = User(email=email, role="guest")
+        db.session.add(user)
+        db.session.commit()
+
+    # Find BnB
+    bnb = BnB.query.filter_by(name=property_name).first()
+    if not bnb:
+        return jsonify({"error": "Property not found"}), 404
+
+    # Create booking
+    booking = Booking(
+        bnb=bnb,
+        booking_code=booking_code,
+        check_in_time=datetime.fromisoformat(check_in),
+        check_out_time=datetime.fromisoformat(check_out),
+    )
+    db.session.add(booking)
+    db.session.commit()
+
+    # Link user to booking
+    user_booking = UserBooking(user=user, booking=booking, is_primary_guest=True)
+    db.session.add(user_booking)
+    db.session.commit()
+
+    # Assign first available Fob
+    fob = (
+        Fob.query
+        .outerjoin(FobBooking)
+        .filter(
+            (FobBooking.id == None) |  # Fob has no bookings at all
+            ((FobBooking.active_until < booking.check_in_time) | (FobBooking.active_from > booking.check_out_time))  # No overlap
+        )
+        .first()
+    )
+
+    if fob:
+        fob_booking = FobBooking(
+            fob=fob,
+            booking=booking,
+            active_from=datetime.fromisoformat(check_in),
+            active_until=datetime.fromisoformat(check_out),
+            is_active=True
+        )
+        db.session.add(fob_booking)
+        db.session.commit()
+        fob_uid = fob.uid
+    else:
+        fob_uid = None  # No available Fob
+
+    return jsonify({
+        "bookingId": booking.id,
+        "email": user.email,
+        "bookingCode": booking.booking_code,
+        "checkIn": check_in,
+        "checkOut": check_out,
+        "bnbName": bnb.name,
+        "fobUID": fob_uid,
+        "status": "Active"
+    }), 201
 
 @booking_bp.route("/bookings", methods=["POST"])
 @jwt_required()

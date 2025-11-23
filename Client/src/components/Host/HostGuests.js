@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import api from "../../api"; // Your Axios instance
+import api from "../../api"; // Axios instance
 import { Search, Plus, Edit, Trash2, Key } from "lucide-react";
 
 export function HostGuests() {
@@ -7,12 +7,20 @@ export function HostGuests() {
   const [guests, setGuests] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch guests on component mount
+  const [formData, setFormData] = useState({
+    email: "",
+    bookingCode: "",
+    checkIn: "",
+    checkOut: "",
+    property: "",
+  });
+
+  // Fetch guests on mount
   useEffect(() => {
     const fetchGuests = async () => {
       try {
         const res = await api.get("/host/get/bookings");
-        setGuests(res.data); // Assuming res.data is an array of guest objects
+        setGuests(res.data);
       } catch (err) {
         console.error("Failed to fetch guests:", err);
       } finally {
@@ -22,9 +30,50 @@ export function HostGuests() {
     fetchGuests();
   }, []);
 
+  const handleInputChange = (e) => {
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+  };
+
+  const handleAddGuest = async () => {
+    const { email, bookingCode, checkIn, checkOut, property } = formData;
+    if (!email || !bookingCode || !checkIn || !checkOut || !property) {
+      return alert("Please fill in all required fields.");
+    }
+
+    try {
+      const res = await api.post("/booking/createBooking", {
+        email,
+        bookingCode,
+        checkIn,
+        checkOut,
+        property,
+      });
+
+      // Add new guest to state
+      setGuests((prev) => [res.data, ...prev]);
+
+      // Reset form
+      setFormData({
+        email: "",
+        bookingCode: "",
+        checkIn: "",
+        checkOut: "",
+        property: "",
+      });
+
+      alert("Guest booking created successfully!");
+    } catch (err) {
+      console.error("Create booking error:", err);
+      alert("Failed to create booking. Check console for details.");
+    }
+  };
+
   const filteredGuests = guests.filter(
     (guest) =>
-      guest.guestName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      guest.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       guest.bookingCode.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -44,7 +93,7 @@ export function HostGuests() {
             </p>
           </div>
 
-          {/* Add Guest Form (collapsible) */}
+          {/* Add Guest Form */}
           <details className="bg-white rounded-2xl border border-slate-200 shadow-sm w-full md:w-auto">
             <summary className="flex items-center justify-center gap-2 px-4 py-2 cursor-pointer text-sm font-medium text-slate-800">
               <Plus className="w-4 h-4" />
@@ -52,42 +101,65 @@ export function HostGuests() {
             </summary>
             <div className="p-4 space-y-4 text-sm">
               <div>
-                <label className="text-sm text-slate-600 mb-1 block">Full Name</label>
-                <input className="w-full px-3 py-2 border border-slate-200 rounded-lg" placeholder="John Doe" />
+                <label className="text-sm text-slate-600 mb-1 block">Email</label>
+                <input
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                  placeholder="guest@example.com"
+                />
               </div>
               <div>
                 <label className="text-sm text-slate-600 mb-1 block">Booking Code</label>
-                <input className="w-full px-3 py-2 border border-slate-200 rounded-lg" placeholder="BK-2025-XXXX" />
+                <input
+                  name="bookingCode"
+                  value={formData.bookingCode}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                  placeholder="BK-2025-XXXX"
+                />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-slate-600 mb-1 block">Check-in</label>
-                  <input type="datetime-local" className="w-full px-3 py-2 border border-slate-200 rounded-lg" />
+                  <input
+                    name="checkIn"
+                    type="datetime-local"
+                    value={formData.checkIn}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                  />
                 </div>
                 <div>
                   <label className="text-sm text-slate-600 mb-1 block">Check-out</label>
-                  <input type="datetime-local" className="w-full px-3 py-2 border border-slate-200 rounded-lg" />
+                  <input
+                    name="checkOut"
+                    type="datetime-local"
+                    value={formData.checkOut}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                  />
                 </div>
               </div>
               <div>
-                <label className="text-sm text-slate-600 mb-1 block">NFC ID</label>
-                <input className="w-full px-3 py-2 border border-slate-200 rounded-lg" placeholder="NFC-XXXX-XX" />
-              </div>
-              <div>
                 <label className="text-sm text-slate-600 mb-1 block">Property</label>
-                <select className="w-full px-3 py-2 border border-slate-200 rounded-lg">
+                <select
+                  name="property"
+                  value={formData.property}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                >
+                  <option value="">Select a property</option>
                   <option>Sunset Beach Villa</option>
                   <option>Downtown Loft</option>
                   <option>Mountain Retreat Cabin</option>
                 </select>
               </div>
-              <div>
-                <label className="text-sm text-slate-600 mb-1 block">Upload Photo</label>
-                <button className="inline-flex items-center px-3 py-1.5 rounded-lg border border-slate-200 text-xs hover:bg-slate-50">
-                  Choose File
-                </button>
-              </div>
-              <button className="w-full inline-flex items-center justify-center px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-700">
+              <button
+                onClick={handleAddGuest}
+                className="w-full inline-flex items-center justify-center px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-700"
+              >
                 Add Guest
               </button>
             </div>
@@ -100,7 +172,7 @@ export function HostGuests() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
-                placeholder="Search by name, booking code..."
+                placeholder="Search by email, booking code..."
                 className="w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -109,7 +181,7 @@ export function HostGuests() {
           </div>
         </section>
 
-        {/* Guests Table - Desktop */}
+        {/* Guests Table */}
         <section className="hidden md:block bg-white rounded-2xl border border-slate-200 shadow-sm">
           <div className="px-4 pt-4">
             <h2 className="text-sm font-semibold text-slate-900">All Guests</h2>
@@ -119,101 +191,38 @@ export function HostGuests() {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
-                  <th className="py-2 pr-4">Name</th>
+                  <th className="py-2 pr-4">Email</th>
                   <th className="py-2 pr-4">Booking Code</th>
                   <th className="py-2 pr-4">Check-in / Check-out</th>
                   <th className="py-2 pr-4">Property</th>
+                  <th className="py-2 pr-4">Fob UID</th>
                   <th className="py-2 pr-4">Status</th>
-                  <th className="py-2 pr-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredGuests.map((guest) => {
-                  const badgeClasses =
-                    guest.status === "Active"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-slate-100 text-slate-700";
-                  return (
-                    <tr key={guest.guestId} className="border-b border-slate-100 last:border-none">
-                      <td className="py-2 pr-4">{guest.guestName}</td>
-                      <td className="py-2 pr-4">{guest.bookingCode}</td>
-                      <td className="py-2 pr-4">
-                        <div className="text-xs">
-                          <div>{guest.checkIn} {guest.checkInTime}</div>
-                          <div className="text-slate-500">{guest.checkOut} {guest.checkOutTime}</div>
-                        </div>
-                      </td>
-                      <td className="py-2 pr-4">{guest.bnbName}</td>
-                      <td className="py-2 pr-4">
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${badgeClasses}`}>
-                          {guest.status}
-                        </span>
-                      </td>
-                      <td className="py-2 pr-4">
-                        <div className="flex gap-1">
-                          <button className="p-1 rounded hover:bg-slate-100"><Edit className="w-4 h-4" /></button>
-                          <button className="p-1 rounded hover:bg-slate-100"><Key className="w-4 h-4" /></button>
-                          <button className="p-1 rounded text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4" /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {filteredGuests.map((guest) => (
+                  <tr key={guest.bookingId} className="border-b border-slate-100 last:border-none">
+                    <td className="py-2 pr-4">{guest.email}</td>
+                    <td className="py-2 pr-4">{guest.bookingCode}</td>
+                    <td className="py-2 pr-4">
+                      <div className="text-xs">
+                        <div>{guest.checkIn}</div>
+                        <div className="text-slate-500">{guest.checkOut}</div>
+                      </div>
+                    </td>
+                    <td className="py-2 pr-4">{guest.bnbName}</td>
+                    <td className="py-2 pr-4">{guest.fobUID}</td>
+                    <td className="py-2 pr-4">
+                      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-emerald-100 text-emerald-700">
+                        Active
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         </section>
-
-        {/* Guests Cards - Mobile */}
-        <div className="md:hidden space-y-3">
-          <div className="text-sm text-slate-600 px-1">{filteredGuests.length} guests found</div>
-          {filteredGuests.map((guest) => {
-            const badgeClasses =
-              guest.status === "Active"
-                ? "bg-emerald-100 text-emerald-700"
-                : "bg-slate-100 text-slate-700";
-            return (
-              <section key={guest.guestId} className="bg-white rounded-2xl border border-slate-200 shadow-sm">
-                <div className="px-4 py-4 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-medium text-sm">{guest.guestName}</p>
-                      <p className="text-xs text-slate-500">{guest.bookingCode}</p>
-                    </div>
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${badgeClasses}`}>
-                      {guest.status}
-                    </span>
-                  </div>
-                  <div className="text-xs space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Check-in:</span>
-                      <span>{guest.checkIn} {guest.checkInTime}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Check-out:</span>
-                      <span>{guest.checkOut} {guest.checkOutTime}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Property:</span>
-                      <span>{guest.bnbName}</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 pt-2">
-                    <button className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-xs hover:bg-slate-50">
-                      <Edit className="w-4 h-4" /> Edit
-                    </button>
-                    <button className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-xs hover:bg-slate-50">
-                      <Key className="w-4 h-4" /> Access
-                    </button>
-                    <button className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-red-200 text-xs text-red-600 hover:bg-red-50">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </section>
-            );
-          })}
-        </div>
       </main>
     </div>
   );
