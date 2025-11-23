@@ -89,6 +89,7 @@ def register():
                     "name": user.name,
                     "email": user.email,
                     "role": user.role,
+                    "photo_path": user.photo_path
                 }
             ),
             201,
@@ -126,6 +127,7 @@ def login():
                 "name": user.name,
                 "email": user.email,
                 "role": user.role,
+                "photo_path": user.photo_path
             }
         ),
         200,
