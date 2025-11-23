@@ -9,13 +9,18 @@ access_bp = Blueprint("access", __name__)
 def get_booking_history(booking_code):
     user_id = int(get_jwt_identity())
 
-    # Ensure the user is part of this booking
+    # Get booking by code
     booking = Booking.query.filter_by(booking_code=booking_code).first()
     if not booking:
         return jsonify({"msg": "Booking not found"}), 404
 
+    # Check if user is either:
+    # 1) linked as a guest
     user_booking = UserBooking.query.filter_by(booking_id=booking.id, user_id=user_id).first()
-    if not user_booking:
+    # 2) the host of the BnB
+    is_host = booking.bnb and booking.bnb.host_id == user_id
+
+    if not user_booking and not is_host:
         return jsonify({"msg": "Unauthorized"}), 403
 
     # Query access logs for this booking
