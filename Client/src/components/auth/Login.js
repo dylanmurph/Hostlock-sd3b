@@ -27,6 +27,7 @@ function Login({ setUser }) {
         name: res.data.name,
         email: res.data.email,
         role: res.data.role,
+        photo: res.data.photo_path,
         token: token,
       };
 
