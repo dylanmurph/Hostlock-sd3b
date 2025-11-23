@@ -24,7 +24,7 @@ function GuestBookings({ user }) {
 
         // Fetch access logs
         const historyPromises = res.data.map(async (b) => {
-          const logRes = await api.get(`/guest/booking/${b.bookingCode}/history`);
+          const logRes = await api.get(`/guest/access/${b.bookingCode}/history`);
           // transform logs to match access_logs table
           const logs = logRes.data.map(log => ({
             timestamp: log.time_logged,
