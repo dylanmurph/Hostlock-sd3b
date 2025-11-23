@@ -6,6 +6,7 @@ export function HostGuests() {
   const [searchQuery, setSearchQuery] = useState("");
   const [guests, setGuests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [properties, setProperties] = useState([]);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -41,7 +42,17 @@ export function HostGuests() {
       }
     };
 
+    const fetchProperties = async () => {
+      try {
+        const res = await api.get("/host/bnbs");
+        setProperties(res.data);
+      } catch (err) {
+        console.error("Failed to fetch host properties:", err);
+      }
+    };
+
     fetchGuests();
+    fetchProperties();
   }, []);
 
   const handleInputChange = (e) => {
@@ -175,6 +186,7 @@ export function HostGuests() {
                   ))}
                 </select>
               </div>
+
 
               <button
                 onClick={handleAddGuest}

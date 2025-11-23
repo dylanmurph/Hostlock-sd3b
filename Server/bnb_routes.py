@@ -20,6 +20,14 @@ def get_bnb(bnb_id):
 
     return jsonify(data), 200
 
+@bnb_bp.route("/host/bnbs", methods=["GET"])
+@jwt_required()
+def get_host_bnbs():
+    host_id = int(get_jwt_identity())
+    bnbs = BnB.query.filter_by(host_id=host_id).all()
+    return jsonify([{"id": bnb.id, "name": bnb.name} for bnb in bnbs]), 200
+
+
 @bnb_bp.route("/bnbs", methods=["GET"])
 @jwt_required()
 def list_bnbs():
