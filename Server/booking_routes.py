@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from .models import db, BnB, Booking, User, UserBooking, Fob, FobBooking
 import json
@@ -98,27 +98,40 @@ def upload_profile_image():
         return jsonify({"error": "No image provided"}), 400
 
     file = request.files["image"]
+    if file.filename == "":
+        return jsonify({"error": "No selected file"}), 400
 
     # Clean filename
     filename = secure_filename(f"user_{user_id}_" + file.filename)
 
     # Upload folder
-    upload_folder = "uploads/profile_images"
+    upload_folder = "uploads/profile_images"  # relative to your project
     os.makedirs(upload_folder, exist_ok=True)
 
+    # Save file to disk
     file_path = os.path.join(upload_folder, filename)
     file.save(file_path)
 
-    # Save filename in DB
+    # Save path in DB
     user = User.query.get(user_id)
-    user.profile_image = filename
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    user.photo_path = file_path
     db.session.commit()
 
     return jsonify({
         "message": "Profile image uploaded",
-        "file": filename
+        "file_path": file_path
     }), 200
+    
+@booking_bp.route("/booking/<int:user_id>/photo")
+def get_user_photo(user_id):
+    user = User.query.get(user_id)
+    if not user or not user.photo_path:
+        return jsonify({"error": "No photo"}), 404
 
+    return send_file(user.photo_path, mimetype="image/jpeg")
 
 @booking_bp.route("/bookings", methods=["POST"])
 @jwt_required()
