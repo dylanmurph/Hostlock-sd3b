@@ -34,6 +34,38 @@ def get_guest_bookings():
 
     return jsonify(data), 200
 
+@booking_bp.route("/host/get/bookings", methods=["GET"])
+@jwt_required()
+def get_guest_bookings():
+    host_id = int(get_jwt_identity())
+
+    # Fetch all BnBs hosted by this user
+    bnbs = BnB.query.filter_by(host_id=host_id).all()
+    if not bnbs:
+        return jsonify([]), 200
+
+    data = []
+
+    for bnb in bnbs:
+        # Iterate over all bookings for this BnB
+        for booking in bnb.bookings:
+            # Iterate over all guests linked to this booking
+            for user_booking in booking.user_links:  # user_links is the UserBooking relationship
+                guest = user_booking.user
+                data.append({
+                    "guestId": guest.id,
+                    "guestName": guest.name,
+                    "bookingCode": booking.booking_code,
+                    "checkIn": booking.check_in_time.strftime("%Y-%m-%d"),
+                    "checkInTime": booking.check_in_time.strftime("%H:%M"),
+                    "checkOut": booking.check_out_time.strftime("%Y-%m-%d"),
+                    "checkOutTime": booking.check_out_time.strftime("%H:%M"),
+                    "bnbId": bnb.id,
+                    "bnbName": bnb.name,
+                    "isPrimaryGuest": user_booking.is_primary_guest
+                })
+
+    return jsonify(data), 200
 
 @booking_bp.route("/bookings", methods=["POST"])
 @jwt_required()
