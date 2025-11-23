@@ -75,7 +75,10 @@ def register():
     try:
         db.session.add(user)
         db.session.commit()
-        access_token = create_access_token(identity={"id": user.id, "role": user.role})
+        access_token = create_access_token(
+            identity=str(user.id),
+            additional_claims={"role": user.role}
+        )
 
         return (
             jsonify(
@@ -109,8 +112,10 @@ def login():
 
     user.last_login_at = datetime.utcnow()
     db.session.commit()
-
-    access_token = create_access_token(identity={"id": user.id, "role": user.role})
+    access_token = create_access_token(
+        identity=str(user.id),
+        additional_claims={"role": user.role}
+    )
 
     return (
         jsonify(
