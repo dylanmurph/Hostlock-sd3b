@@ -36,7 +36,7 @@ def get_guest_bookings():
 
 @booking_bp.route("/host/get/bookings", methods=["GET"])
 @jwt_required()
-def get_guest_bookings():
+def get_host_bookings():
     host_id = int(get_jwt_identity())
 
     # Fetch all BnBs hosted by this user
