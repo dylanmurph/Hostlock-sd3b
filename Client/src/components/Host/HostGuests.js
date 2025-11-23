@@ -21,23 +21,26 @@ export function HostGuests() {
       try {
         const res = await api.get("/host/get/bookings");
 
-        const flattened = res.data.map((g) => ({
-          email: g.user?.email || "",
-          bookingCode: g.booking?.bookingCode || "",
-          checkIn: g.booking?.checkIn || "",
-          checkOut: g.booking?.checkOut || "",
-          bnbName: g.bnb?.name || "",
-          fobUID: g.fob?.uid || "",
-          bookingId: g.booking?.id || g.id
+        const mappedGuests = res.data.map((g) => ({
+          id: g.bookingId || g.guestId,
+          name: g.guestName || g.email,
+          bookingCode: g.bookingCode || "",
+          checkIn: g.checkIn || "",
+          checkOut: g.checkOut || "",
+          nfcId: g.fobUID || "",
+          property: g.bnbName || "",
+          status: g.status || "Active",
         }));
 
-        setGuests(flattened);
+        console.log(mappedGuests);
+        setGuests(mappedGuests);
       } catch (err) {
         console.error("Failed to fetch guests:", err);
       } finally {
         setLoading(false);
       }
     };
+
     fetchGuests();
   }, []);
 
@@ -165,11 +168,14 @@ export function HostGuests() {
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg"
                 >
                   <option value="">Select a property</option>
-                  <option>Sunset Beach Villa</option>
-                  <option>Downtown Loft</option>
-                  <option>Mountain Retreat Cabin</option>
+                  {properties.map((bnb) => (
+                    <option key={bnb.id} value={bnb.id}>
+                      {bnb.name}
+                    </option>
+                  ))}
                 </select>
               </div>
+
               <button
                 onClick={handleAddGuest}
                 className="w-full inline-flex items-center justify-center px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-700"
@@ -195,48 +201,76 @@ export function HostGuests() {
           </div>
         </section>
 
-        {/* Guests Table */}
-        <section className="hidden md:block bg-white rounded-2xl border border-slate-200 shadow-sm">
-          <div className="px-4 pt-4">
-            <h2 className="text-sm font-semibold text-slate-900">All Guests</h2>
-            <p className="text-xs text-slate-500 mb-4">{filteredGuests.length} guests found</p>
+        {/* Guests Cards - Mobile */}
+        <div className="md:hidden space-y-3">
+          <div className="text-sm text-slate-600 px-1">
+            {filteredGuests.length} guests found
           </div>
-          <div className="px-4 pb-4 overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
-                  <th className="py-2 pr-4">Email</th>
-                  <th className="py-2 pr-4">Booking Code</th>
-                  <th className="py-2 pr-4">Check-in / Check-out</th>
-                  <th className="py-2 pr-4">Property</th>
-                  <th className="py-2 pr-4">Fob UID</th>
-                  <th className="py-2 pr-4">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredGuests.map((guest) => (
-                  <tr key={guest.bookingId} className="border-b border-slate-100 last:border-none">
-                    <td className="py-2 pr-4">{guest.email}</td>
-                    <td className="py-2 pr-4">{guest.bookingCode}</td>
-                    <td className="py-2 pr-4">
-                      <div className="text-xs">
-                        <div>{guest.checkIn}</div>
-                        <div className="text-slate-500">{guest.checkOut}</div>
-                      </div>
-                    </td>
-                    <td className="py-2 pr-4">{guest.bnbName}</td>
-                    <td className="py-2 pr-4">{guest.fobUID}</td>
-                    <td className="py-2 pr-4">
-                      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-emerald-100 text-emerald-700">
-                        Active
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+
+          {filteredGuests.map((guest) => {
+            const badgeClasses =
+              guest.status === "Active"
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-slate-100 text-slate-700";
+
+            return (
+              <section
+                key={guest.bookingId}
+                className="bg-white rounded-2xl border border-slate-200 shadow-sm"
+              >
+                <div className="px-4 py-4 space-y-3">
+                  {/* Header: Email + Status */}
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-medium text-sm">{guest.email}</p>
+                      <p className="text-xs text-slate-500">{guest.bookingCode}</p>
+                    </div>
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${badgeClasses}`}
+                    >
+                      {guest.status}
+                    </span>
+                  </div>
+
+                  {/* Booking details */}
+                  <div className="text-xs space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Check-in:</span>
+                      <span>{guest.checkIn}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Check-out:</span>
+                      <span>{guest.checkOut}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Property:</span>
+                      <span>{guest.bnbName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Fob UID:</span>
+                      <span>{guest.fobUID}</span>
+                    </div>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex gap-2 pt-2">
+                    <button className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-xs hover:bg-slate-50">
+                      <Edit className="w-4 h-4" />
+                      Edit
+                    </button>
+                    <button className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-xs hover:bg-slate-50">
+                      <Key className="w-4 h-4" />
+                      Access
+                    </button>
+                    <button className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-red-200 text-xs text-red-600 hover:bg-red-50">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </section>
+            );
+          })}
+        </div>
       </main>
     </div>
   );
