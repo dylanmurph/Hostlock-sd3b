@@ -129,7 +129,7 @@ function App() {
           />
 
           {/* ======================= ADMIN ======================= */}
-          <Route
+          {/* <Route
             path="/admin/dashboard"
             element={
               <RequireRole user={user} role="admin">
@@ -166,42 +166,22 @@ function App() {
                 <Navigate to="/auth/login" replace />
               )
             }
-          />
-
-          {/* ======================= GUEST ======================= */}
-          {/* <Route
-            path="/guest/home"
-            element={
-              <RequireRole user={user} role="guest">
-                <GuestHome user={user} />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="/guest/alerts"
-            element={
-              <RequireRole user={user} role="guest">
-                <GuestAlerts user={user} />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="/guest/bookings"
-            element={
-              <RequireRole user={user} role="guest">
-                <GuestBookings user={user} />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="/guest/settings"
-            element={
-              <RequireRole user={user} role="guest">
-                <GuestSettings onLogout={handleLogout} />
-              </RequireRole>
-            }
           /> */}
 
+          <Route
+            element={
+              <RequireRole user={user} role="admin">
+                <AdminLayout user={user} onLogout={handleLogout} />
+              </RequireRole>
+            }
+          >
+            <Route path="/admin/dashboard" element={<AdminDashboard user={user} />} />
+            <Route path="/admin/hosts" element={<AdminHosts user={user} />} />
+            <Route path="/admin/properties" element={<AdminProperties user={user} />} />
+          </Route>
+
+
+          {/* ======================= GUEST ======================= */}
           <Route
             element={
               <RequireRole user={user} role="guest">
