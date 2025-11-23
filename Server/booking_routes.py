@@ -138,12 +138,6 @@ def get_user_profile():
         "email": user.email,
         "photo_path": user.photo_path
     }), 200
-    
-from flask import Blueprint, request, jsonify
-from .models import db, User, Booking, BnB, UserBooking, Fob, FobBooking
-from datetime import datetime, timezone
-
-booking_bp = Blueprint("booking_bp", __name__)
 
 @booking_bp.route("/booking/createBooking", methods=["POST"])
 def create_booking():
