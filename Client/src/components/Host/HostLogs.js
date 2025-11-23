@@ -1,8 +1,5 @@
 import React from "react";
-import {
-  Download,
-  Filter,
-} from "lucide-react";
+import { Filter } from "lucide-react";
 import { accessLogs } from "../../mockData";
 
 export function HostLogs() {
@@ -13,6 +10,7 @@ export function HostLogs() {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* MAIN CONTENT */}
       <main className="flex-1 p-4 md:p-6 space-y-4 md:space-y-6">
+
         {/* Header + Actions */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -23,15 +21,12 @@ export function HostLogs() {
               Complete timeline of all access events
             </p>
           </div>
+
+          {/* Only Filter button now */}
           <div className="flex gap-2">
             <button className="flex-1 md:flex-initial inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-slate-200 text-sm hover:bg-slate-50">
               <Filter className="w-4 h-4" />
               Filter
-            </button>
-            <button className="flex-1 md:flex-initial inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-cyan-600 text-white text-sm hover:bg-cyan-700">
-              <Download className="w-4 h-4" />
-              <span className="hidden md:inline">Export CSV</span>
-              <span className="md:hidden">Export</span>
             </button>
           </div>
         </div>
@@ -113,9 +108,7 @@ export function HostLogs() {
                       <td className="py-2 pr-4 text-sm">{log.method}</td>
                       <td className="py-2 pr-4">
                         <div className="flex items-center gap-2">
-                          <span
-                            className={`w-2 h-2 rounded-full ${dotClass}`}
-                          />
+                          <span className={`w-2 h-2 rounded-full ${dotClass}`} />
                           <span
                             className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${badgeClasses}`}
                           >
