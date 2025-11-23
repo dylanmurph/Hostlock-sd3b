@@ -13,6 +13,7 @@ import Register from "./components/auth/Register";
 import AdminDashboard from "./components/Admin/AdminDashboard";
 import AdminHosts from "./components/Admin/AdminHosts";
 import AdminProperties from "./components/Admin/AdminProperties";
+import AdminLayout from "./components/Admin/AdminLayout";
 
 // Guest pages
 import GuestHome from "./components/Guest/GuestHome";
@@ -130,29 +131,18 @@ function App() {
 
           {/* ======================= ADMIN ======================= */}
           <Route
-            path="/admin/dashboard"
             element={
               <RequireRole user={user} role="admin">
-                <AdminDashboard user={user} />
+                <AdminLayout />
               </RequireRole>
             }
-          />
-          <Route
-            path="/admin/hosts"
-            element={
-              <RequireRole user={user} role="admin">
-                <AdminHosts user={user} />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="/admin/properties"
-            element={
-              <RequireRole user={user} role="admin">
-                <AdminProperties user={user} />
-              </RequireRole>
-            }
-          />
+          >
+            <Route path="/admin/dashboard" element={<AdminDashboard user={user} />} />
+            <Route path="/admin/hosts" element={<AdminHosts user={user} />} />
+            <Route path="/admin/properties" element={<AdminProperties user={user} />} />
+          </Route>
+
+          {/* /admin root redirect */}
           <Route
             path="/admin"
             element={
@@ -169,39 +159,6 @@ function App() {
           />
 
           {/* ======================= GUEST ======================= */}
-          {/* <Route
-            path="/guest/home"
-            element={
-              <RequireRole user={user} role="guest">
-                <GuestHome user={user} />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="/guest/alerts"
-            element={
-              <RequireRole user={user} role="guest">
-                <GuestAlerts user={user} />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="/guest/bookings"
-            element={
-              <RequireRole user={user} role="guest">
-                <GuestBookings user={user} />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="/guest/settings"
-            element={
-              <RequireRole user={user} role="guest">
-                <GuestSettings onLogout={handleLogout} />
-              </RequireRole>
-            }
-          /> */}
-
           <Route
             element={
               <RequireRole user={user} role="guest">
@@ -229,7 +186,6 @@ function App() {
             <Route path="/host/alerts" element={<HostAlerts user={user} />} />
             <Route path="/host/settings" element={<HostSettings onLogout={handleLogout} />} />
           </Route>
-
 
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
