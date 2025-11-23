@@ -28,7 +28,6 @@ export const adminProperties = [
     name: "Dundalk Apartment",
     hostId: 1,
     hostName: "John Host",
-    address: "123 Main Street, Dundalk, Ireland",
     activeGuests: 2,
     nfcDevices: 3,
     cameras: 2,
@@ -39,7 +38,6 @@ export const adminProperties = [
     name: "Beach House",
     hostId: 1,
     hostName: "John Host",
-    address: "45 Coast Road, Co. Louth",
     activeGuests: 3,
     nfcDevices: 4,
     cameras: 3,
@@ -50,7 +48,6 @@ export const adminProperties = [
     name: "City Studio",
     hostId: 2,
     hostName: "Mary Property",
-    address: "12 High Street, Dublin",
     activeGuests: 0,
     nfcDevices: 1,
     cameras: 1,
@@ -80,7 +77,6 @@ export const bookings = [
   {
     id: 1,
     propertyName: "Dundalk Apartment",
-    propertyAddress: "123 Main Street, Dundalk, Ireland",
     checkIn: "2025-11-20",
     checkOut: "2025-11-25",
     bookingCode: "ABC12345",
@@ -89,7 +85,6 @@ export const bookings = [
   {
     id: 2,
     propertyName: "City Studio",
-    propertyAddress: "12 High Street, Dublin",
     checkIn: "2025-10-01",
     checkOut: "2025-10-05",
     bookingCode: "XYZ98765",
@@ -170,7 +165,7 @@ export const accessLogs = [
     timestamp: "2025-11-20 15:03",
     guestName: "Emily Clark",
     door: "Apartment Door",
-    method: "PIN",
+    method: "NFC",
     status: "Success",
   },
   {
