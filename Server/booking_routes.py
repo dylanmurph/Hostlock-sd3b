@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from .models import db, BnB, Booking, User, UserBooking, Fob, FobBooking
 import json
+from datetime import datetime, timezone
 
 booking_bp = Blueprint("booking", __name__)
 
@@ -33,14 +34,6 @@ def get_guest_bookings():
         })
 
     return jsonify(data), 200
-
-from datetime import datetime, timezone
-
-from flask import Blueprint, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime, timezone
-
-booking_bp = Blueprint("booking", __name__)
 
 @booking_bp.route("/host/get/bookings", methods=["GET"])
 @jwt_required()
