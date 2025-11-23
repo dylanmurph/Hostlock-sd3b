@@ -27,12 +27,12 @@ function GuestBookings({ user }) {
           const logRes = await api.get(`/guest/access/${b.bookingCode}/history`);
           // transform logs to match access_logs table
           const logs = logRes.data.map(log => ({
-            timestamp: log.time_logged,
-            status: log.match_result === "match" ? "Success" : "Failed",
-            user: log.recognized_user?.name || "Unknown",
-            method: log.event_type || "Unknown",
-            fob: log.fob_id || null,
-            snapshot: log.snapshot_path || null
+            timestamp: log.timestamp,
+            status: log.status || "Unknown",
+            user: log.user || "Unknown",
+            method: log.method || "Unknown",
+            fob: log.fob || null,
+            snapshot: log.snapshot || null
           }));
           return { [b.bookingCode]: logs };
         });
