@@ -3,6 +3,8 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from .models import db, BnB, Booking, User, UserBooking, Fob, FobBooking
 import json
 from datetime import datetime, timezone
+import os
+from werkzeug.utils import secure_filename
 
 booking_bp = Blueprint("booking", __name__)
 
@@ -86,6 +88,37 @@ def get_host_bookings():
                 })
 
     return jsonify(data), 200
+
+@booking_bp.route("/booking/uploadImage", methods=["POST"])
+@jwt_required()
+def upload_profile_image():
+    user_id = int(get_jwt_identity())
+
+    if "image" not in request.files:
+        return jsonify({"error": "No image provided"}), 400
+
+    file = request.files["image"]
+
+    # Clean filename
+    filename = secure_filename(f"user_{user_id}_" + file.filename)
+
+    # Upload folder
+    upload_folder = "uploads/profile_images"
+    os.makedirs(upload_folder, exist_ok=True)
+
+    file_path = os.path.join(upload_folder, filename)
+    file.save(file_path)
+
+    # Save filename in DB
+    user = User.query.get(user_id)
+    user.profile_image = filename
+    db.session.commit()
+
+    return jsonify({
+        "message": "Profile image uploaded",
+        "file": filename
+    }), 200
+
 
 @booking_bp.route("/bookings", methods=["POST"])
 @jwt_required()

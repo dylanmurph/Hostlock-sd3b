@@ -10,7 +10,35 @@ import {
 export function GuestSettings({ onLogout }) {
   const handleLogout = () => {
     if (onLogout) {
-      onLogout(); // calls App.handleLogout -> clears token + user
+      onLogout();
+    }
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setSelectedImage(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const uploadImage = async () => {
+    if (!selectedImage) return alert("No image selected.");
+
+    const formData = new FormData();
+    formData.append("image", selectedImage);
+
+    try {
+      const res = await api.post(`/booking/uploadImage`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      alert("Profile image updated!");
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Failed to upload image.");
     }
   };
 
@@ -27,6 +55,56 @@ export function GuestSettings({ onLogout }) {
               Manage your account and preferences
             </p>
           </div>
+
+          {/* ---------------- PROFILE IMAGE SECTION ---------------- */}
+          <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+            <h2 className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
+              <User className="w-5 h-5" />
+              Profile Photo
+            </h2>
+
+            <div className="flex items-center gap-4">
+              {/* Avatar preview */}
+              <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-200">
+                {previewUrl ? (
+                  <img
+                    src={previewUrl}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">
+                    No Image
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label
+                  htmlFor="upload"
+                  className="px-3 py-2 text-sm rounded-lg border border-slate-300 cursor-pointer flex items-center gap-2 hover:bg-slate-50"
+                >
+                  <Camera className="w-4 h-4" />
+                  Choose Image
+                </label>
+
+                <input
+                  id="upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
+
+                <button
+                  onClick={uploadImage}
+                  className="px-4 py-2 bg-cyan-600 text-white rounded-lg text-sm hover:bg-cyan-700"
+                >
+                  Upload Image
+                </button>
+              </div>
+            </div>
+          </section>
 
           {/* Profile Settings */}
           <section className="bg-white rounded-2xl shadow-sm border border-slate-200">
