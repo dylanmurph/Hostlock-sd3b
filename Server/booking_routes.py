@@ -36,38 +36,56 @@ def get_guest_bookings():
 
 from datetime import datetime, timezone
 
+from flask import Blueprint, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from datetime import datetime, timezone
+
+booking_bp = Blueprint("booking", __name__)
+
 @booking_bp.route("/host/get/bookings", methods=["GET"])
 @jwt_required()
 def get_host_bookings():
     host_id = int(get_jwt_identity())
 
+    # Fetch all BnBs hosted by this user
     bnbs = BnB.query.filter_by(host_id=host_id).all()
     if not bnbs:
         return jsonify([]), 200
 
+    # Current time as timezone-aware UTC
     now = datetime.now(timezone.utc)
+
     data = []
 
     for bnb in bnbs:
         for booking in bnb.bookings:
+            # Ensure check_in_time and check_out_time are timezone-aware
+            check_in = booking.check_in_time
+            check_out = booking.check_out_time
+
+            if check_in.tzinfo is None:
+                check_in = check_in.replace(tzinfo=timezone.utc)
+            if check_out.tzinfo is None:
+                check_out = check_out.replace(tzinfo=timezone.utc)
+
+            # Determine booking status
+            if check_in <= now <= check_out:
+                status = "Active"
+            elif now < check_in:
+                status = "Upcoming"
+            else:
+                status = "Checked Out"
+
             for user_booking in booking.user_links:
                 guest = user_booking.user
-                # Compute guest status
-                if booking.check_in_time <= now <= booking.check_out_time:
-                    status = "Active"
-                elif now < booking.check_in_time:
-                    status = "Upcoming"
-                else:
-                    status = "Checked Out"
-
                 data.append({
                     "guestId": guest.id,
                     "guestName": guest.name,
                     "bookingCode": booking.booking_code,
-                    "checkIn": booking.check_in_time.strftime("%Y-%m-%d"),
-                    "checkInTime": booking.check_in_time.strftime("%H:%M"),
-                    "checkOut": booking.check_out_time.strftime("%Y-%m-%d"),
-                    "checkOutTime": booking.check_out_time.strftime("%H:%M"),
+                    "checkIn": check_in.strftime("%Y-%m-%d"),
+                    "checkInTime": check_in.strftime("%H:%M"),
+                    "checkOut": check_out.strftime("%Y-%m-%d"),
+                    "checkOutTime": check_out.strftime("%H:%M"),
                     "bnbId": bnb.id,
                     "bnbName": bnb.name,
                     "isPrimaryGuest": user_booking.is_primary_guest,
