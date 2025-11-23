@@ -19,7 +19,7 @@ export function GuestSettings({ onLogout }) {
     if (userStr) {
       const user = JSON.parse(userStr);
       if (user.photo) {
-        setPreviewUrl(user.photo);
+        setPreviewUrl(`https://www.hostlocksd3b.online/${user.photo}`);
       }
     }
   }, []);
