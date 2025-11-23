@@ -20,7 +20,18 @@ export function HostGuests() {
     const fetchGuests = async () => {
       try {
         const res = await api.get("/host/get/bookings");
-        setGuests(res.data);
+
+        const flattened = res.data.map((g) => ({
+          email: g.user?.email || "",
+          bookingCode: g.booking?.bookingCode || "",
+          checkIn: g.booking?.checkIn || "",
+          checkOut: g.booking?.checkOut || "",
+          bnbName: g.bnb?.name || "",
+          fobUID: g.fob?.uid || "",
+          bookingId: g.booking?.id || g.id
+        }));
+
+        setGuests(flattened);
       } catch (err) {
         console.error("Failed to fetch guests:", err);
       } finally {

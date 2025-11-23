@@ -76,6 +76,7 @@ def get_host_bookings():
                 data.append({
                     "guestId": guest.id,
                     "guestName": guest.name,
+                    "email": guest.email,
                     "bookingCode": booking.booking_code,
                     "checkIn": check_in.strftime("%Y-%m-%d"),
                     "checkInTime": check_in.strftime("%H:%M"),
@@ -84,7 +85,9 @@ def get_host_bookings():
                     "bnbId": bnb.id,
                     "bnbName": bnb.name,
                     "isPrimaryGuest": user_booking.is_primary_guest,
-                    "status": status
+                    "status": status,
+                    "fobUID": booking.fob_links[0].fob.uid if booking.fob_links else None,
+                    "bookingId": booking.id
                 })
 
     return jsonify(data), 200
