@@ -13,6 +13,7 @@ import Register from "./components/auth/Register";
 import AdminDashboard from "./components/Admin/AdminDashboard";
 import AdminHosts from "./components/Admin/AdminHosts";
 import AdminProperties from "./components/Admin/AdminProperties";
+import AdminLayout from "./components/Admin/AdminLayout";
 
 // Guest pages
 import GuestHome from "./components/Guest/GuestHome";
