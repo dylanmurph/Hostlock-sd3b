@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import api from "../../api"; // Axios instance
+import api from "../../api";
 import { Search, Plus, Edit, Trash2, Key } from "lucide-react";
 
 export function HostGuests() {
@@ -256,11 +256,11 @@ export function HostGuests() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-500">Property:</span>
-                      <span>{guest.bnbName}</span>
+                      <span>{guest.property}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-500">Fob UID:</span>
-                      <span>{guest.fobUID}</span>
+                      <span>{guest.nfcId}</span>
                     </div>
                   </div>
 
