@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api'; // your axios instance with baseURL & auth
+import api from '../../api';
 
 // --- mock alerts ---
 const hostAlerts = [
