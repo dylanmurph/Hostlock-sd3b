@@ -19,6 +19,7 @@ import GuestHome from "./components/Guest/GuestHome";
 import GuestAlerts from "./components/Guest/GuestAlerts";
 import GuestBookings from "./components/Guest/GuestBookings";
 import GuestSettings from "./components/Guest/GuestSettings";
+import GuestLayout from "./components/Guest/GuestLayout";
 
 // Host pages
 import HostHome from "./components/Host/HostHome";
@@ -168,7 +169,7 @@ function App() {
           />
 
           {/* ======================= GUEST ======================= */}
-          <Route
+          {/* <Route
             path="/guest/home"
             element={
               <RequireRole user={user} role="guest">
@@ -199,49 +200,22 @@ function App() {
                 <GuestSettings onLogout={handleLogout} />
               </RequireRole>
             }
-          />
+          /> */}
+
+          <Route
+            element={
+              <RequireRole user={user} role="guest">
+                <GuestLayout />
+              </RequireRole>
+            }
+          >
+            <Route path="/guest/home" element={<GuestHome user={user} />} />
+            <Route path="/guest/bookings" element={<GuestBookings user={user} />} />
+            <Route path="/guest/alerts" element={<GuestAlerts user={user} />} />
+            <Route path="/guest/settings" element={<GuestSettings onLogout={handleLogout} />} />
+          </Route>
 
           {/* ======================= HOST ======================= */}
-          {/* <Route
-            path="/host/home"
-            element={
-              <RequireRole user={user} role="host">
-                <HostHome user={user} />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="/host/guests"
-            element={
-              <RequireRole user={user} role="host">
-                <HostGuests user={user} />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="/host/alerts"
-            element={
-              <RequireRole user={user} role="host">
-                <HostAlerts user={user} />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="/host/logs"
-            element={
-              <RequireRole user={user} role="host">
-                <HostLogs user={user} />
-              </RequireRole>
-            }
-          />
-          <Route
-            path="/host/settings"
-            element={
-              <RequireRole user={user} role="host">
-                <HostSettings onLogout={handleLogout} />
-              </RequireRole>
-            }
-          /> */}
           <Route
             element={
               <RequireRole user={user} role="host">
