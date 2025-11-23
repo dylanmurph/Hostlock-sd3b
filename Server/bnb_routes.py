@@ -4,6 +4,22 @@ from .models import db, BnB
 
 bnb_bp = Blueprint("bnb", __name__)
 
+@bnb_bp.route("/bnbs/<int:bnb_id>", methods=["GET"])
+@jwt_required()
+def get_bnb(bnb_id):
+    bnb = BnB.query.get(bnb_id)
+    if not bnb:
+        return jsonify({"message": "BnB not found"}), 404
+
+    data = {
+        "id": bnb.id,
+        "unique_code": bnb.unique_code,
+        "name": bnb.name,
+        "host_id": bnb.host_id,
+    }
+
+    return jsonify(data), 200
+
 @bnb_bp.route("/bnbs", methods=["GET"])
 @jwt_required()
 def list_bnbs():
