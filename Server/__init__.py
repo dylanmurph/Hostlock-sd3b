@@ -6,6 +6,9 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 import os
 
+from .hardware import init_pubnub 
+from .realtime_routes import realtime_bp
+
 # Load environment variables from the .env file
 load_dotenv()
 
@@ -93,6 +96,12 @@ def create_app():
     app.register_blueprint(access_bp)
     app.register_blueprint(tamper_bp)
     app.register_blueprint(hardware_bp)
+    app.register_blueprint(realtime_bp)
+
+    # ------------------------------------------------------------
+    # Start PubNub listener
+    # ------------------------------------------------------------
+    init_pubnub()   # runs once when app is created
 
     # ------------------------------------------------------------
 
