@@ -116,25 +116,19 @@ def init_pubnub() -> PubNub:
     Set up PubNub and start subscribing.
     Call this once from create_app().
     """
-    global listener_added
-
     pnconfig = PNConfiguration()
     pnconfig.publish_key = PUBLISH_KEY
     pnconfig.subscribe_key = SUBSCRIBE_KEY
     pnconfig.user_id = "web-server"
-    pnconfig.enable_subscribe = True
+    pnconfig.enable_subscribe = True 
 
     pubnub = PubNub(pnconfig)
-
-    if not listener_added:
-        pubnub.add_listener(WebListener())
-        listener_added = True
-
-    if not pubnub.is_subscribed():
-        pubnub.subscribe().channels([CHANNEL]).execute()
+    pubnub.add_listener(WebListener())
+    pubnub.subscribe().channels(CHANNEL).execute()
 
     print("PubNub initialized and subscribed on channel:", CHANNEL)
     return pubnub
+
 
 def publish_access_decision(pubnub, uid: str, access: str) -> None:
     """
