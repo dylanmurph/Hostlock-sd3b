@@ -1,21 +1,17 @@
-# Server/hardware_routes.py
-
 from flask import Blueprint, request, jsonify
-from .hardware import publish_access_decision, message_queue, init_pubnub, UID_LABELS, ALLOWED_UIDS, CHANNEL
-from .models import db, AccessLog, TamperLog 
+from .models import db, AccessLog, TamperAlert
+# Import from the new service file
+from .hardware_service import HardwareService, message_queue, UID_LABELS, ALLOWED_UIDS
 
 hardware_bp = Blueprint('hardware', __name__)
-
-# Initialize PubNub for usage in this file
-pubnub = init_pubnub()
 
 @hardware_bp.route("/hardware/fob_tap", methods=["POST"])
 def handle_fob_tap_event():
     """
-    Handle fob tap events: check if the UID is allowed, log access, and publish decision.
+    Handle fob tap events via HTTP POST (if used) or manual testing.
     """
     data = request.get_json()
-    nfc_uid = data.get("nfc_uid")  # expected to be part of the POST body
+    nfc_uid = data.get("nfc_uid")
 
     if not nfc_uid:
         return jsonify({"error": "Missing NFC UID"}), 400
@@ -25,20 +21,24 @@ def handle_fob_tap_event():
         access = "granted"
     else:
         access = "denied"
+    
+    label = UID_LABELS.get(nfc_uid, "Unknown")
 
-    # Log the access event (if you have an AccessLog model)
-    new_log = AccessLog(uid=nfc_uid, access=access)
-    db.session.add(new_log)
-    db.session.commit()
+    # Log to Database
+    # Note: Ensure your AccessLog model supports these fields
+    # new_log = AccessLog(uid=nfc_uid, access=access)
+    # db.session.add(new_log)
+    # db.session.commit()
 
-    # Publish decision to PubNub
-    publish_access_decision(pubnub, nfc_uid, access)
+    # Use the Service to publish to Pi
+    HardwareService.publish_decision(nfc_uid, access, label)
 
-    # Push the decision to the message queue for SSE
+    # Push to SSE
     message_queue.put({
+        "type": "access_decision",
         "nfc_uid": nfc_uid,
         "access": access,
-        "label": UID_LABELS.get(nfc_uid, "Unknown")
+        "label": label
     })
 
     return jsonify({"message": "Access decision published", "access": access})
@@ -47,7 +47,7 @@ def handle_fob_tap_event():
 @hardware_bp.route("/hardware/tamper_event", methods=["POST"])
 def handle_tamper_event():
     """
-    Handle tamper events: log the event and send an alert via PubNub.
+    Handle tamper events via HTTP POST.
     """
     data = request.get_json()
     tamper_id = data.get("tamper_id")
@@ -55,19 +55,12 @@ def handle_tamper_event():
     if not tamper_id:
         return jsonify({"error": "Missing tamper ID"}), 400
 
-    # Log the tamper event (if you have a TamperLog model)
-    new_tamper = TamperLog(tamper_id=tamper_id)
-    db.session.add(new_tamper)
-    db.session.commit()
+    # Log to Database
+    # new_tamper = TamperAlert(bnb_id=1) # Example
+    # db.session.add(new_tamper)
+    # db.session.commit()
 
-    # Publish tamper alert to PubNub
-    alert_message = {"tamper_id": tamper_id, "alert": "Tamper detected!"}
-    pubnub.publish().channel(CHANNEL).message(alert_message).sync()
-
-    # Push tamper alert to the message queue for SSE
-    message_queue.put({
-        "tamper_id": tamper_id,
-        "alert": "Tamper detected!"
-    })
+    # Publish alert
+    HardwareService.publish_tamper_alert(tamper_id, "Tamper detected!")
 
     return jsonify({"message": "Tamper alert published"})

@@ -1,12 +1,11 @@
-# Server/realtime_routes.py
 from flask import Blueprint, Response, render_template, send_from_directory
-from .hardware import message_queue, IMAGE_DIR
+# Update this import line:
+from .hardware_service import message_queue, IMAGE_DIR
 
 realtime_bp = Blueprint("realtime", __name__)
 
 @realtime_bp.route("/")
 def index():
-    # same index as in app.py
     return render_template("index.html")
 
 @realtime_bp.route("/stream")
