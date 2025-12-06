@@ -109,11 +109,15 @@ class WebListener(SubscribeCallback):
                 "image_filename": filename,
             }))
 
+listener_added = False
+
 def init_pubnub() -> PubNub:
     """
     Set up PubNub and start subscribing.
     Call this once from create_app().
     """
+    global listener_added
+
     pnconfig = PNConfiguration()
     pnconfig.publish_key = PUBLISH_KEY
     pnconfig.subscribe_key = SUBSCRIBE_KEY
@@ -122,17 +126,15 @@ def init_pubnub() -> PubNub:
 
     pubnub = PubNub(pnconfig)
 
-    # Add listener only once (check if it's already added)
-    if not pubnub._listeners:
+    if not listener_added:
         pubnub.add_listener(WebListener())
+        listener_added = True
 
-    # Ensure subscription happens only once
     if not pubnub.is_subscribed():
         pubnub.subscribe().channels([CHANNEL]).execute()
 
     print("PubNub initialized and subscribed on channel:", CHANNEL)
     return pubnub
-
 
 def publish_access_decision(pubnub, uid: str, access: str) -> None:
     """
