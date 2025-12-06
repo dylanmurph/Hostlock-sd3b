@@ -204,7 +204,7 @@ export function HostGuests() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
-                placeholder="Search by email, booking code..."
+                placeholder="Search by booking code..."
                 className="w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -269,10 +269,6 @@ export function HostGuests() {
                     <button className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-xs hover:bg-slate-50">
                       <Edit className="w-4 h-4" />
                       Edit
-                    </button>
-                    <button className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-xs hover:bg-slate-50">
-                      <Key className="w-4 h-4" />
-                      Access
                     </button>
                     <button className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-red-200 text-xs text-red-600 hover:bg-red-50">
                       <Trash2 className="w-4 h-4" />
