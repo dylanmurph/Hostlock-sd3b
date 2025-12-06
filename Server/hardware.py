@@ -121,11 +121,18 @@ def init_pubnub() -> PubNub:
     pnconfig.enable_subscribe = True
 
     pubnub = PubNub(pnconfig)
-    pubnub.add_listener(WebListener())
-    pubnub.subscribe().channels(CHANNEL).execute()
+
+    # Add listener only once (check if it's already added)
+    if not pubnub._listeners:
+        pubnub.add_listener(WebListener())
+
+    # Ensure subscription happens only once
+    if not pubnub.is_subscribed():
+        pubnub.subscribe().channels([CHANNEL]).execute()
 
     print("PubNub initialized and subscribed on channel:", CHANNEL)
     return pubnub
+
 
 def publish_access_decision(pubnub, uid: str, access: str) -> None:
     """
