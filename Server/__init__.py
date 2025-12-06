@@ -85,6 +85,7 @@ def create_app():
     from .access_routes import access_bp
     from .tamper_routes import tamper_bp
     from .hardware_routes import hardware_bp
+    from .dbroute import db_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(bnb_bp)
@@ -93,6 +94,7 @@ def create_app():
     app.register_blueprint(access_bp)
     app.register_blueprint(tamper_bp)
     app.register_blueprint(hardware_bp)
+    app.register_blueprint(db_bp)
 
     # ------------------------------------------------------------
 
