@@ -1,41 +1,66 @@
 from flask import Blueprint, request, jsonify
-from .models import db, BnB, Fob, Booking, FobBooking, AccessLog, TamperAlert, User
+from .models import db, AccessLog, TamperAlert
+# Import from the new service file
+from .hardware_service import HardwareService, message_queue, UID_LABELS, ALLOWED_UIDS
 
-hardware_bp = Blueprint("hardware", __name__)
+hardware_bp = Blueprint('hardware', __name__)
 
 @hardware_bp.route("/hardware/fob_tap", methods=["POST"])
 def handle_fob_tap_event():
     """
-    Handle a fob tap event sent from the Raspberry Pi (via PubNub or webhook).
-    Expected payload:
-    - bnb_unique_code
-    - fob_uid
-    - image_url
-    - timestamp
-
-    TODO:
-    - Lookup BnB by unique_code.
-    - Lookup Fob by UID (or treat as unknown).
-    - Check active FobBooking and determine if fob is valid.
-    - Immediately decide access_granted (True/False).
-    - Download image from AWS, store permanently.
-    - Optionally run face recognition for logging.
-    - Insert AccessLog row with snapshot_path, match_result, etc.
-    - Return JSON { \"access_granted\": bool } for Pi to act on.
+    Handle fob tap events via HTTP POST (if used) or manual testing.
     """
-    return jsonify({"access_granted": False}), 200
+    data = request.get_json()
+    nfc_uid = data.get("nfc_uid")
+
+    if not nfc_uid:
+        return jsonify({"error": "Missing NFC UID"}), 400
+
+    # Check access
+    if nfc_uid in ALLOWED_UIDS:
+        access = "granted"
+    else:
+        access = "denied"
+    
+    label = UID_LABELS.get(nfc_uid, "Unknown")
+
+    # Log to Database
+    # Note: Ensure your AccessLog model supports these fields
+    # new_log = AccessLog(uid=nfc_uid, access=access)
+    # db.session.add(new_log)
+    # db.session.commit()
+
+    # Use the Service to publish to Pi
+    HardwareService.publish_decision(nfc_uid, access, label)
+
+    # Push to SSE
+    message_queue.put({
+        "type": "access_decision",
+        "nfc_uid": nfc_uid,
+        "access": access,
+        "label": label
+    })
+
+    return jsonify({"message": "Access decision published", "access": access})
 
 
-@hardware_bp.route("/hardware/tamper", methods=["POST"])
+@hardware_bp.route("/hardware/tamper_event", methods=["POST"])
 def handle_tamper_event():
     """
-    Handle a tamper-open event sent from the Raspberry Pi.
-    Expected payload:
-    - bnb_unique_code
-    - timestamp
-
-    TODO:
-    - Lookup BnB by unique_code.
-    - Insert TamperAlert row with bnb_id and triggered_at.
+    Handle tamper events via HTTP POST.
     """
-    return jsonify({"status": "ok"}), 200
+    data = request.get_json()
+    tamper_id = data.get("tamper_id")
+
+    if not tamper_id:
+        return jsonify({"error": "Missing tamper ID"}), 400
+
+    # Log to Database
+    # new_tamper = TamperAlert(bnb_id=1) # Example
+    # db.session.add(new_tamper)
+    # db.session.commit()
+
+    # Publish alert
+    HardwareService.publish_tamper_alert(tamper_id, "Tamper detected!")
+
+    return jsonify({"message": "Tamper alert published"})
