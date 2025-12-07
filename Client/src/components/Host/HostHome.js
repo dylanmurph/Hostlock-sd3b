@@ -192,7 +192,7 @@ const HostHome = () => {
           />
         </div>
 
-        {/* 2. Properties block – moved UNDER stats */}
+        {/* 2. Properties block */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:p-5">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-base md:text-lg font-semibold">

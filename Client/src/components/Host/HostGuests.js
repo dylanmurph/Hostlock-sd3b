@@ -61,6 +61,7 @@ export function HostGuests() {
         }
     };
 
+    
     useEffect(() => {
         refreshGuests();
     }, []);
