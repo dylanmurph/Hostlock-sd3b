@@ -24,6 +24,7 @@ def create_app():
     # Get database and JWT secret
     database_url = os.getenv("DATABASE_URL")
     jwt_secret_key = os.getenv("JWT_SECRET_KEY")
+    website_path = os.getenv("WEBSITE_PATH")
 
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["JWT_SECRET_KEY"] = jwt_secret_key
@@ -31,7 +32,7 @@ def create_app():
 
     CORS(
         app,
-        origins=["https://www.hostlocksd3b.online"],
+        origins=[website_path],
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization"],
         supports_credentials=True,
