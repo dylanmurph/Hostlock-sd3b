@@ -2,10 +2,53 @@ import React, { useEffect, useState } from "react";
 import { Filter } from "lucide-react";
 import api from "../../api";
 
+// helper: turn snake_case into "Title Case"
+const toTitle = (str) =>
+  str
+    .toLowerCase()
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+
+// helper: map backend status to category + label
+const mapStatus = (raw) => {
+  if (!raw) {
+    return { category: "Other", label: "Unknown" };
+  }
+
+  const s = String(raw).toLowerCase();
+
+  // success types
+  if (s === "granted") {
+    return { category: "Success", label: "Granted" };
+  }
+  if (s === "granted_face") {
+    return { category: "Success", label: "Granted (with face match)" };
+  }
+  if (s === "granted_no_face") {
+    return { category: "Success", label: "Granted (no face match)" };
+  }
+
+  // failure / denied types
+  if (
+    s === "denied" ||
+    s === "failed" ||
+    s === "match_failure" ||
+    s === "face_mismatch" ||
+    s === "no_fob" ||
+    s === "no_face"
+  ) {
+    return { category: "Failed", label: toTitle(s) };
+  }
+
+  // default: keep original but look nicer
+  return { category: "Other", label: toTitle(s) };
+};
+
 export function HostLogs() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All"); // All | Success | Failed
   const [openFilter, setOpenFilter] = useState(false);
   const [error, setError] = useState(null);
 
@@ -18,14 +61,20 @@ export function HostLogs() {
         // matches Flask backend route
         const res = await api.get("/host/access/logs");
 
-        const normalised = res.data.map((log, index) => ({
-          id: log.id ?? index,
-          time: log.timestamp,
-          guestName: log.user || "Unknown",
-          property: log.bnbName || "Unknown property",
-          method: log.method || "Unknown",
-          status: log.status || "Unknown",
-        }));
+        const normalised = res.data.map((log, index) => {
+          const { category, label } = mapStatus(log.status);
+
+          return {
+            id: log.id ?? index,
+            time: log.timestamp,
+            guestName: log.user || "Unknown",
+            property: log.bnbName || "Unknown property",
+            method: log.method || "Unknown",
+            statusRaw: log.status,
+            statusCategory: category, // "Success" | "Failed" | "Other"
+            statusLabel: label,
+          };
+        });
 
         setLogs(normalised);
       } catch (err) {
@@ -42,15 +91,19 @@ export function HostLogs() {
   const filteredLogs =
     statusFilter === "All"
       ? logs
-      : logs.filter((l) => l.status === statusFilter);
+      : logs.filter((l) => l.statusCategory === statusFilter);
 
-  const successCount = filteredLogs.filter((l) => l.status === "Success").length;
-  const failedCount = filteredLogs.filter((l) => l.status === "Failed").length;
+  const successCount = filteredLogs.filter(
+    (l) => l.statusCategory === "Success"
+  ).length;
+
+  const failedCount = filteredLogs.filter(
+    (l) => l.statusCategory === "Failed"
+  ).length;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <main className="flex-1 p-4 md:p-6 space-y-4 md:space-y-6">
-
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -158,11 +211,20 @@ export function HostLogs() {
 
                   <tbody>
                     {filteredLogs.map((log) => {
-                      const isSuccess = log.status === "Success";
-                      const dotClass = isSuccess ? "bg-green-500" : "bg-red-500";
+                      const isSuccess = log.statusCategory === "Success";
+                      const isFailed = log.statusCategory === "Failed";
+
+                      const dotClass = isSuccess
+                        ? "bg-green-500"
+                        : isFailed
+                        ? "bg-red-500"
+                        : "bg-slate-400";
+
                       const badgeClass = isSuccess
                         ? "bg-emerald-100 text-emerald-700"
-                        : "bg-red-100 text-red-700";
+                        : isFailed
+                        ? "bg-red-100 text-red-700"
+                        : "bg-slate-100 text-slate-700";
 
                       return (
                         <tr key={log.id} className="border-b last:border-none">
@@ -172,9 +234,13 @@ export function HostLogs() {
                           <td className="py-2 pr-4">{log.method}</td>
                           <td className="py-2 pr-4">
                             <div className="flex items-center gap-2">
-                              <span className={`w-2 h-2 rounded-full ${dotClass}`} />
-                              <span className={`px-2 py-0.5 rounded-full text-[11px] ${badgeClass}`}>
-                                {log.status}
+                              <span
+                                className={`w-2 h-2 rounded-full ${dotClass}`}
+                              />
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[11px] ${badgeClass}`}
+                              >
+                                {log.statusLabel}
                               </span>
                             </div>
                           </td>
@@ -189,10 +255,14 @@ export function HostLogs() {
             {/* Mobile list */}
             <div className="md:hidden space-y-3">
               {filteredLogs.map((log) => {
-                const isSuccess = log.status === "Success";
+                const isSuccess = log.statusCategory === "Success";
+                const isFailed = log.statusCategory === "Failed";
+
                 const badgeClass = isSuccess
                   ? "bg-emerald-100 text-emerald-700"
-                  : "bg-red-100 text-red-700";
+                  : isFailed
+                  ? "bg-red-100 text-red-700"
+                  : "bg-slate-100 text-slate-700";
 
                 return (
                   <section
@@ -203,10 +273,14 @@ export function HostLogs() {
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="text-sm font-medium">{log.guestName}</p>
-                          <p className="text-xs text-slate-500">{log.property}</p>
+                          <p className="text-xs text-slate-500">
+                            {log.property}
+                          </p>
                         </div>
-                        <span className={`px-2 py-0.5 rounded-full text-[11px] ${badgeClass}`}>
-                          {log.status}
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[11px] ${badgeClass}`}
+                        >
+                          {log.statusLabel}
                         </span>
                       </div>
 

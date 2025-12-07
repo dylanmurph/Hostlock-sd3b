@@ -17,7 +17,7 @@ import AdminLayout from "./components/Admin/AdminLayout";
 
 // Guest pages
 import GuestHome from "./components/Guest/GuestHome";
-import GuestAlerts from "./components/Guest/GuestAlerts";
+//import GuestAlerts from "./components/Guest/GuestAlerts";
 import GuestBookings from "./components/Guest/GuestBookings";
 import GuestSettings from "./components/Guest/GuestSettings";
 import GuestLayout from "./components/Guest/GuestLayout";
@@ -177,7 +177,7 @@ function App() {
           >
             <Route path="/guest/home" element={<GuestHome user={user} />} />
             <Route path="/guest/bookings" element={<GuestBookings user={user} />} />
-            <Route path="/guest/alerts" element={<GuestAlerts user={user} />} />
+            {/* <Route path="/guest/alerts" element={<GuestAlerts user={user} />} /> */}
             <Route
               path="/guest/settings"
               element={<GuestSettings onLogout={handleLogout} />}

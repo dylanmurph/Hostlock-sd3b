@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { User, Trash2, LogOut, Camera } from "lucide-react";
+import { User, LogOut, Camera } from "lucide-react";
 import api from "../../api";
 
 export function GuestSettings({ onLogout }) {
@@ -16,7 +16,7 @@ export function GuestSettings({ onLogout }) {
   const [profileError, setProfileError] = useState(null);
   const [profileSuccess, setProfileSuccess] = useState(null);
 
-  // Load profile photo (from localStorage/backend) + profile data (from /me)
+  // Load profile photo + profile data
   useEffect(() => {
     const init = async () => {
       // 1) Photo from localStorage (if present)
@@ -41,8 +41,9 @@ export function GuestSettings({ onLogout }) {
         });
 
         if (res.data.photo_path) {
-          // override with backend photo if available
-          setPreviewUrl(`https://www.hostlocksd3b.online/${res.data.photo_path}`);
+          setPreviewUrl(
+            `https://www.hostlocksd3b.online/${res.data.photo_path}`
+          );
         }
       } catch (err) {
         console.error("Failed to load profile:", err.response || err);
@@ -59,7 +60,6 @@ export function GuestSettings({ onLogout }) {
     if (onLogout) onLogout();
   };
 
-  // Handle text input changes
   const handleChange = (e) => {
     const { id, value } = e.target;
 
@@ -72,7 +72,6 @@ export function GuestSettings({ onLogout }) {
     }
   };
 
-  // Save profile to backend
   const handleSaveProfile = async (e) => {
     e.preventDefault();
 
@@ -89,7 +88,6 @@ export function GuestSettings({ onLogout }) {
 
       const res = await api.put("/me", payload);
 
-      // Refresh local profile with backend response
       const updated = res.data;
       setProfile({
         name: updated.name || "",
@@ -97,7 +95,6 @@ export function GuestSettings({ onLogout }) {
         contact_number: updated.contact_number || "",
       });
 
-      // Keep localStorage "user" in sync
       const userStr = localStorage.getItem("user");
       if (userStr) {
         const user = JSON.parse(userStr);
@@ -116,7 +113,6 @@ export function GuestSettings({ onLogout }) {
     }
   };
 
-  // Image select
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -124,7 +120,6 @@ export function GuestSettings({ onLogout }) {
     setPreviewUrl(URL.createObjectURL(file));
   };
 
-  // Upload image to backend
   const uploadImage = async () => {
     if (!selectedImage) return alert("No image selected.");
 
@@ -136,7 +131,6 @@ export function GuestSettings({ onLogout }) {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // Assuming backend returns { file: "uploads/profile_images/..." }
       const photoUrl = `https://www.hostlocksd3b.online/${res.data.file}`;
       setPreviewUrl(photoUrl);
 
@@ -318,11 +312,6 @@ export function GuestSettings({ onLogout }) {
               >
                 <LogOut className="w-4 h-4" />
                 Log Out
-              </button>
-
-              <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-red-200 text-sm text-red-600 hover:bg-red-50">
-                <Trash2 className="w-4 h-4" />
-                Delete Account
               </button>
             </div>
           </section>
