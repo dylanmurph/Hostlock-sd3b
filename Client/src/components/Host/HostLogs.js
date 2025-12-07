@@ -1,17 +1,57 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Filter } from "lucide-react";
-import { accessLogs } from "../../mockData";
+import api from "../../api";
 
 export function HostLogs() {
-  const successCount = accessLogs.filter((l) => l.status === "Success").length;
-  const failedCount = accessLogs.filter((l) => l.status === "Failed").length;
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [openFilter, setOpenFilter] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // matches Flask backend route
+        const res = await api.get("/host/access/logs");
+
+        const normalised = res.data.map((log, index) => ({
+          id: log.id ?? index,
+          time: log.timestamp,
+          guestName: log.user || "Unknown",
+          property: log.bnbName || "Unknown property",
+          method: log.method || "Unknown",
+          status: log.status || "Unknown",
+        }));
+
+        setLogs(normalised);
+      } catch (err) {
+        console.error("Failed to fetch access logs:", err);
+        setError("Failed to load access logs.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLogs();
+  }, []);
+
+  const filteredLogs =
+    statusFilter === "All"
+      ? logs
+      : logs.filter((l) => l.status === statusFilter);
+
+  const successCount = filteredLogs.filter((l) => l.status === "Success").length;
+  const failedCount = filteredLogs.filter((l) => l.status === "Failed").length;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* MAIN CONTENT */}
       <main className="flex-1 p-4 md:p-6 space-y-4 md:space-y-6">
 
-        {/* Header + Actions */}
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-slate-900 mb-2 text-lg font-semibold">
@@ -22,152 +62,171 @@ export function HostLogs() {
             </p>
           </div>
 
-          {/* Only Filter button now */}
-          <div className="flex gap-2">
-            <button className="flex-1 md:flex-initial inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-slate-200 text-sm hover:bg-slate-50">
+          {/* Filter button */}
+          <div className="relative">
+            <button
+              onClick={() => setOpenFilter((prev) => !prev)}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 text-sm hover:bg-slate-50"
+            >
               <Filter className="w-4 h-4" />
-              Filter
+              {statusFilter === "All" ? "Filter" : statusFilter}
             </button>
+
+            {openFilter && (
+              <div className="absolute right-0 mt-2 w-32 bg-white border border-slate-200 rounded-lg shadow-md text-sm z-10">
+                {["All", "Success", "Failed"].map((opt) => (
+                  <button
+                    key={opt}
+                    className="w-full text-left px-3 py-2 hover:bg-slate-50"
+                    onClick={() => {
+                      setStatusFilter(opt);
+                      setOpenFilter(false);
+                    }}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Stats Summary */}
-        <div className="grid grid-cols-3 gap-3 md:gap-4">
-          <section className="bg-white rounded-2xl border border-slate-200 shadow-sm">
-            <div className="px-4 py-3 border-b border-slate-100">
-              <p className="text-xs md:text-sm text-slate-500">
-                Total Attempts Today
-              </p>
-            </div>
-            <div className="px-4 py-3">
-              <div className="text-2xl md:text-3xl">{accessLogs.length}</div>
-            </div>
-          </section>
+        {/* Messages */}
+        {loading && (
+          <p className="text-xs text-slate-500">Loading access logs...</p>
+        )}
+        {error && <p className="text-xs text-red-500">{error}</p>}
 
-          <section className="bg-white rounded-2xl border border-slate-200 shadow-sm">
-            <div className="px-4 py-3 border-b border-slate-100">
-              <p className="text-xs md:text-sm text-slate-500">Successful</p>
-            </div>
-            <div className="px-4 py-3">
-              <div className="text-2xl md:text-3xl text-green-600">
-                {successCount}
-              </div>
-            </div>
-          </section>
-
-          <section className="bg-white rounded-2xl border border-slate-200 shadow-sm">
-            <div className="px-4 py-3 border-b border-slate-100">
-              <p className="text-xs md:text-sm text-slate-500">Failed</p>
-            </div>
-            <div className="px-4 py-3">
-              <div className="text-2xl md:text-3xl text-red-600">
-                {failedCount}
-              </div>
-            </div>
-          </section>
-        </div>
-
-        {/* Logs Table - Desktop */}
-        <section className="hidden md:block bg-white rounded-2xl border border-slate-200 shadow-sm">
-          <div className="px-4 pt-4">
-            <h2 className="text-sm font-semibold text-slate-900">
-              Access Events
-            </h2>
-            <p className="text-xs text-slate-500 mb-4">
-              All access attempts across your properties
-            </p>
-          </div>
-          <div className="px-4 pb-4 overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
-                  <th className="py-2 pr-4">Time</th>
-                  <th className="py-2 pr-4">Guest Name</th>
-                  <th className="py-2 pr-4">Property</th>
-                  <th className="py-2 pr-4">Method</th>
-                  <th className="py-2 pr-4">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {accessLogs.map((log) => {
-                  const dotClass =
-                    log.status === "Success" ? "bg-green-500" : "bg-red-500";
-                  const badgeClasses =
-                    log.status === "Success"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-red-100 text-red-700";
-
-                  return (
-                    <tr
-                      key={log.id}
-                      className="border-b border-slate-100 last:border-none"
-                    >
-                      <td className="py-2 pr-4">{log.time}</td>
-                      <td className="py-2 pr-4">{log.guestName}</td>
-                      <td className="py-2 pr-4 text-sm">{log.property}</td>
-                      <td className="py-2 pr-4 text-sm">{log.method}</td>
-                      <td className="py-2 pr-4">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${dotClass}`} />
-                          <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${badgeClasses}`}
-                          >
-                            {log.status}
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        {/* Logs Cards - Mobile */}
-        <div className="md:hidden space-y-3">
-          {accessLogs.map((log) => {
-            const badgeClasses =
-              log.status === "Success"
-                ? "bg-emerald-100 text-emerald-700"
-                : "bg-red-100 text-red-700";
-
-            return (
-              <section
-                key={log.id}
-                className="bg-white rounded-2xl border border-slate-200 shadow-sm"
-              >
-                <div className="px-4 py-4 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate text-sm">
-                        {log.guestName}
-                      </p>
-                      <p className="text-xs text-slate-500 truncate">
-                        {log.property}
-                      </p>
-                    </div>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${badgeClasses}`}
-                    >
-                      {log.status}
-                    </span>
-                  </div>
-                  <div className="text-xs space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Time:</span>
-                      <span>{log.time}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Method:</span>
-                      <span className="text-right">{log.method}</span>
-                    </div>
-                  </div>
+        {!loading && (
+          <>
+            {/* Summary cards */}
+            <div className="grid grid-cols-3 gap-3 md:gap-4">
+              <section className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+                <div className="px-4 py-3 border-b border-slate-100">
+                  <p className="text-xs md:text-sm text-slate-500">
+                    Total Attempts (filtered)
+                  </p>
+                </div>
+                <div className="px-4 py-3 text-2xl md:text-3xl">
+                  {filteredLogs.length}
                 </div>
               </section>
-            );
-          })}
-        </div>
+
+              <section className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+                <div className="px-4 py-3 border-b border-slate-100">
+                  <p className="text-xs md:text-sm text-slate-500">
+                    Successful
+                  </p>
+                </div>
+                <div className="px-4 py-3 text-2xl md:text-3xl text-green-600">
+                  {successCount}
+                </div>
+              </section>
+
+              <section className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+                <div className="px-4 py-3 border-b border-slate-100">
+                  <p className="text-xs md:text-sm text-slate-500">Failed</p>
+                </div>
+                <div className="px-4 py-3 text-2xl md:text-3xl text-red-600">
+                  {failedCount}
+                </div>
+              </section>
+            </div>
+
+            {/* Desktop logs table */}
+            <section className="hidden md:block bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <div className="px-4 pt-4">
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Access Events
+                </h2>
+                <p className="text-xs text-slate-500 mb-4">
+                  All access attempts across your properties
+                </p>
+              </div>
+
+              <div className="px-4 pb-4 overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-xs text-slate-500">
+                      <th className="py-2 pr-4">Time</th>
+                      <th className="py-2 pr-4">Guest Name</th>
+                      <th className="py-2 pr-4">Property</th>
+                      <th className="py-2 pr-4">Method</th>
+                      <th className="py-2 pr-4">Status</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {filteredLogs.map((log) => {
+                      const isSuccess = log.status === "Success";
+                      const dotClass = isSuccess ? "bg-green-500" : "bg-red-500";
+                      const badgeClass = isSuccess
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-red-100 text-red-700";
+
+                      return (
+                        <tr key={log.id} className="border-b last:border-none">
+                          <td className="py-2 pr-4">{log.time}</td>
+                          <td className="py-2 pr-4">{log.guestName}</td>
+                          <td className="py-2 pr-4">{log.property}</td>
+                          <td className="py-2 pr-4">{log.method}</td>
+                          <td className="py-2 pr-4">
+                            <div className="flex items-center gap-2">
+                              <span className={`w-2 h-2 rounded-full ${dotClass}`} />
+                              <span className={`px-2 py-0.5 rounded-full text-[11px] ${badgeClass}`}>
+                                {log.status}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            {/* Mobile list */}
+            <div className="md:hidden space-y-3">
+              {filteredLogs.map((log) => {
+                const isSuccess = log.status === "Success";
+                const badgeClass = isSuccess
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-red-100 text-red-700";
+
+                return (
+                  <section
+                    key={log.id}
+                    className="bg-white rounded-2xl border border-slate-200 shadow-sm"
+                  >
+                    <div className="px-4 py-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-sm font-medium">{log.guestName}</p>
+                          <p className="text-xs text-slate-500">{log.property}</p>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full text-[11px] ${badgeClass}`}>
+                          {log.status}
+                        </span>
+                      </div>
+
+                      <div className="text-xs space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Time:</span>
+                          <span>{log.time}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Method:</span>
+                          <span>{log.method}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+          </>
+        )}
       </main>
     </div>
   );

@@ -24,6 +24,7 @@ def create_app():
     # Get database and JWT secret
     database_url = os.getenv("DATABASE_URL")
     jwt_secret_key = os.getenv("JWT_SECRET_KEY")
+    website_path = os.getenv("WEBSITE_PATH")
 
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["JWT_SECRET_KEY"] = jwt_secret_key
@@ -31,7 +32,7 @@ def create_app():
 
     CORS(
         app,
-        origins=["https://www.hostlocksd3b.online"],
+        origins=[website_path],
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization"],
         supports_credentials=True,
@@ -67,6 +68,7 @@ def create_app():
     from .access_routes import access_bp
     from .tamper_routes import tamper_bp
     from .hardware_routes import hardware_bp
+    from .dbroute import db_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(bnb_bp)
@@ -75,7 +77,7 @@ def create_app():
     app.register_blueprint(access_bp)
     app.register_blueprint(tamper_bp)
     app.register_blueprint(hardware_bp)
-    app.register_blueprint(realtime_bp)
+    app.register_blueprint(db_bp)
 
     # ------------------------------------------------------------
     # START PUBNUB (Fix for Debug/Reloader Duplication)

@@ -162,7 +162,7 @@ def create_booking():
         db.session.commit()
 
     # Find BnB by ID
-    bnb = BnB.query.get(property_id)  # ✅ lookup by ID
+    bnb = BnB.query.get(property_id)  # lookup by ID
     if not bnb:
         return jsonify({"error": "Property not found"}), 404
 

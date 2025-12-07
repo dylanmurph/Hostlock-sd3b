@@ -1,32 +1,122 @@
 import React, { useState, useEffect } from "react";
-import {
-  Shield,
-  Bell,
-  User,
-  Trash2,
-  LogOut,
-  Camera,
-} from "lucide-react";
+import { User, Trash2, LogOut, Camera } from "lucide-react";
 import api from "../../api";
 
 export function GuestSettings({ onLogout }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
 
+  const [profile, setProfile] = useState({
+    name: "",
+    email: "",
+    contact_number: "",
+  });
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState(null);
+  const [profileSuccess, setProfileSuccess] = useState(null);
+
+  // Load profile photo (from localStorage/backend) + profile data (from /me)
   useEffect(() => {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      if (user.photo) {
-        setPreviewUrl(`https://www.hostlocksd3b.online/uploads/profile_images/user_2_logo192.png`);
+    const init = async () => {
+      // 1) Photo from localStorage (if present)
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user.photo) {
+          setPreviewUrl(user.photo);
+        }
       }
-    }
+
+      // 2) Profile (and photo) from backend
+      try {
+        setLoadingProfile(true);
+        setProfileError(null);
+
+        const res = await api.get("/me");
+        setProfile({
+          name: res.data.name || "",
+          email: res.data.email || "",
+          contact_number: res.data.contact_number || "",
+        });
+
+        if (res.data.photo_path) {
+          // override with backend photo if available
+          setPreviewUrl(`https://www.hostlocksd3b.online/${res.data.photo_path}`);
+        }
+      } catch (err) {
+        console.error("Failed to load profile:", err.response || err);
+        setProfileError("Failed to load profile.");
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    init();
   }, []);
 
   const handleLogout = () => {
     if (onLogout) onLogout();
   };
 
+  // Handle text input changes
+  const handleChange = (e) => {
+    const { id, value } = e.target;
+
+    if (id === "guest-name") {
+      setProfile((prev) => ({ ...prev, name: value }));
+    } else if (id === "guest-email") {
+      setProfile((prev) => ({ ...prev, email: value }));
+    } else if (id === "guest-phone") {
+      setProfile((prev) => ({ ...prev, contact_number: value }));
+    }
+  };
+
+  // Save profile to backend
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+
+    try {
+      setSavingProfile(true);
+      setProfileError(null);
+      setProfileSuccess(null);
+
+      const payload = {
+        name: profile.name,
+        email: profile.email,
+        contact_number: profile.contact_number,
+      };
+
+      const res = await api.put("/me", payload);
+
+      // Refresh local profile with backend response
+      const updated = res.data;
+      setProfile({
+        name: updated.name || "",
+        email: updated.email || "",
+        contact_number: updated.contact_number || "",
+      });
+
+      // Keep localStorage "user" in sync
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        user.name = updated.name;
+        user.email = updated.email;
+        user.contact_number = updated.contact_number;
+        localStorage.setItem("user", JSON.stringify(user));
+      }
+
+      setProfileSuccess("Profile updated successfully.");
+    } catch (err) {
+      console.error("Failed to update profile:", err.response || err);
+      setProfileError("Failed to update profile.");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  // Image select
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -34,6 +124,7 @@ export function GuestSettings({ onLogout }) {
     setPreviewUrl(URL.createObjectURL(file));
   };
 
+  // Upload image to backend
   const uploadImage = async () => {
     if (!selectedImage) return alert("No image selected.");
 
@@ -45,21 +136,21 @@ export function GuestSettings({ onLogout }) {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // Assuming backend returns just filename
+      // Assuming backend returns { file: "uploads/profile_images/..." }
       const photoUrl = `https://www.hostlocksd3b.online/${res.data.file}`;
       setPreviewUrl(photoUrl);
 
-      // Update localStorage
       const userStr = localStorage.getItem("user");
       if (userStr) {
         const user = JSON.parse(userStr);
         user.photo = photoUrl;
+        user.photo_path = res.data.file;
         localStorage.setItem("user", JSON.stringify(user));
       }
 
       alert("Profile image updated!");
     } catch (err) {
-      console.error("Upload error:", err);
+      console.error("Upload error:", err.response || err);
       alert("Failed to upload image.");
     }
   };
@@ -77,7 +168,7 @@ export function GuestSettings({ onLogout }) {
             </p>
           </div>
 
-          {/* ---------------- PROFILE IMAGE SECTION ---------------- */}
+          {/* PROFILE IMAGE SECTION */}
           <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
             <h2 className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
               <User className="w-5 h-5" />
@@ -85,7 +176,6 @@ export function GuestSettings({ onLogout }) {
             </h2>
 
             <div className="flex items-center gap-4">
-              {/* Avatar preview */}
               <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-200">
                 {previewUrl ? (
                   <img
@@ -127,7 +217,7 @@ export function GuestSettings({ onLogout }) {
             </div>
           </section>
 
-          {/* Profile Settings */}
+          {/* PROFILE INFO */}
           <section className="bg-white rounded-2xl shadow-sm border border-slate-200">
             <div className="px-4 py-3 border-b border-slate-100">
               <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
@@ -139,158 +229,87 @@ export function GuestSettings({ onLogout }) {
               </p>
             </div>
 
-            <div className="px-4 py-4 space-y-4 text-sm">
-              <div>
-                <label
-                  htmlFor="name"
-                  className="block text-xs font-medium text-slate-700"
-                >
-                  Full Name
-                </label>
-                <input
-                  id="name"
-                  type="text"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg mt-1 text-sm"
-                  defaultValue="Sarah Johnson"
-                />
-              </div>
+            <form
+              onSubmit={handleSaveProfile}
+              className="px-4 py-4 space-y-4 text-sm"
+            >
+              {loadingProfile && (
+                <p className="text-xs text-slate-500">Loading profile...</p>
+              )}
 
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block text-xs font-medium text-slate-700"
-                >
-                  Email Address
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg mt-1 text-sm"
-                  defaultValue="sarah.j@example.com"
-                />
-              </div>
+              {profileError && (
+                <p className="text-xs text-red-500">{profileError}</p>
+              )}
 
-              <div>
-                <label
-                  htmlFor="phone"
-                  className="block text-xs font-medium text-slate-700"
-                >
-                  Phone Number
-                </label>
-                <input
-                  id="phone"
-                  type="tel"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg mt-1 text-sm"
-                  defaultValue="+1 (555) 123-4567"
-                />
-              </div>
+              {profileSuccess && (
+                <p className="text-xs text-emerald-600">{profileSuccess}</p>
+              )}
 
-              <button className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-700">
-                Save Changes
-              </button>
-            </div>
+              {!loadingProfile && (
+                <>
+                  <div>
+                    <label
+                      htmlFor="guest-name"
+                      className="block text-xs font-medium text-slate-700"
+                    >
+                      Full Name
+                    </label>
+                    <input
+                      id="guest-name"
+                      type="text"
+                      value={profile.name}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg mt-1 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="guest-email"
+                      className="block text-xs font-medium text-slate-700"
+                    >
+                      Email Address
+                    </label>
+                    <input
+                      id="guest-email"
+                      type="email"
+                      value={profile.email}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg mt-1 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="guest-phone"
+                      className="block text-xs font-medium text-slate-700"
+                    >
+                      Phone Number
+                    </label>
+                    <input
+                      id="guest-phone"
+                      type="tel"
+                      value={profile.contact_number}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg mt-1 text-sm"
+                    />
+                  </div>
+
+                  <div className="flex justify-center">
+                    <button
+                      type="submit"
+                      disabled={savingProfile}
+                      className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-700 disabled:opacity-60"
+                    >
+                      {savingProfile ? "Saving..." : "Save Changes"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </form>
           </section>
 
-          {/* Security */}
-          <section className="bg-white rounded-2xl shadow-sm border border-slate-200">
-            <div className="px-4 py-3 border-b border-slate-100">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <Shield className="w-5 h-5" />
-                Security
-              </h2>
-              <p className="text-xs text-slate-500 mt-1">
-                Enhance your account security
-              </p>
-            </div>
-
-            <div className="px-4 py-4 space-y-4 text-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <label
-                    htmlFor="twofa"
-                    className="text-xs font-medium text-slate-700"
-                  >
-                    Two-Step Verification
-                  </label>
-                  <p className="text-xs text-slate-500">
-                    Add an extra layer of security
-                  </p>
-                </div>
-                <input id="twofa" type="checkbox" className="h-4 w-4" />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <label
-                    htmlFor="biometric"
-                    className="text-xs font-medium text-slate-700"
-                  >
-                    Biometric Login
-                  </label>
-                  <p className="text-xs text-slate-500">
-                    Use Face ID or Touch ID
-                  </p>
-                </div>
-                <input
-                  id="biometric"
-                  type="checkbox"
-                  defaultChecked
-                  className="h-4 w-4"
-                />
-              </div>
-
-              <button className="px-3 py-2 rounded-lg border border-slate-200 text-sm hover:bg-slate-50">
-                Change Password
-              </button>
-            </div>
-          </section>
-
-          {/* Notification Preferences */}
-          <section className="bg-white rounded-2xl shadow-sm border border-slate-200">
-            <div className="px-4 py-3 border-b border-slate-100">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <Bell className="w-5 h-5" />
-                Notification Preferences
-              </h2>
-              <p className="text-xs text-slate-500 mt-1">
-                Choose how you want to be notified
-              </p>
-            </div>
-
-            <div className="px-4 py-4 space-y-4 text-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <label htmlFor="push" className="text-xs font-medium text-slate-700">
-                    Push Notifications
-                  </label>
-                  <p className="text-xs text-slate-500">Receive alerts on your device</p>
-                </div>
-                <input id="push" type="checkbox" defaultChecked className="h-4 w-4" />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <label htmlFor="email-notif" className="text-xs font-medium text-slate-700">
-                    Email Notifications
-                  </label>
-                  <p className="text-xs text-slate-500">Get updates via email</p>
-                </div>
-                <input id="email-notif" type="checkbox" defaultChecked className="h-4 w-4" />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <label htmlFor="sms" className="text-xs font-medium text-slate-700">
-                    SMS Notifications
-                  </label>
-                  <p className="text-xs text-slate-500">Receive text messages</p>
-                </div>
-                <input id="sms" type="checkbox" className="h-4 w-4" />
-              </div>
-            </div>
-          </section>
-
-          {/* Account Actions */}
+          {/* ACCOUNT ACTIONS */}
           <section className="bg-white rounded-2xl shadow-sm border border-slate-200">
             <div className="px-4 py-4 space-y-3">
               <button

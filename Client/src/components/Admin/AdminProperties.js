@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { adminProperties, adminHosts } from "../../mockData";
-import { Search, Building2, UserCheck, Camera, Wifi, Trash2, Edit, Plus } from 'lucide-react';
+import { Search, Building2, Trash2, Edit, Plus } from 'lucide-react';
 
 export function AdminProperties() {
   const [searchQuery, setSearchQuery] = useState('');
