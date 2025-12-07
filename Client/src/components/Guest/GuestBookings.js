@@ -2,11 +2,15 @@ import React, { useEffect, useState } from "react";
 import api from "../../api";
 import { Calendar, Clock, History as HistoryIcon, XCircle } from "lucide-react";
 
+import CancelConfirmationModal from './CancelConfirmationModal';
+
 function GuestBookings({ user }) {
   const [bookings, setBookings] = useState([]);
   const [accessLogs, setAccessLogs] = useState({}); // store logs by booking code
   const [bnbs, setBnbs] = useState({}); // store bnb info by id
   const [loading, setLoading] = useState(true);
+
+  const [bookingToCancel, setBookingToCancel] = useState(null);
 
   useEffect(() => {
     async function fetchBookingsAndLogs() {
@@ -61,11 +65,15 @@ function GuestBookings({ user }) {
     fetchBookingsAndLogs();
   }, []);
 
-  const handleCancelBooking = async (bookingCode) => {
-    const confirm = window.confirm(
-      "Are you sure you want to cancel this booking?"
-    );
-    if (!confirm) return;
+  // Triggers the modal
+  const handleCancelBooking = (booking) => {
+    setBookingToCancel(booking);
+  };
+
+  // Handles the API call after modal confirmation
+  const handleExecuteCancel = async () => {
+    const bookingCode = bookingToCancel.bookingCode;
+    setBookingToCancel(null); // Close the modal immediately
 
     try {
       await api.delete(`/guest/booking/${bookingCode}`);
@@ -80,8 +88,6 @@ function GuestBookings({ user }) {
         delete clone[bookingCode];
         return clone;
       });
-
-      alert("Booking cancelled.");
     } catch (err) {
       console.error("Failed to cancel booking:", err);
       alert(
@@ -213,7 +219,7 @@ function GuestBookings({ user }) {
                   )}
 
                   <button
-                    onClick={() => handleCancelBooking(booking.bookingCode)}
+                    onClick={() => handleCancelBooking(booking)}
                     className="mt-1 inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-red-200 text-xs text-red-600 hover:bg-red-50 self-end"
                   >
                     <XCircle className="w-3.5 h-3.5" />
@@ -225,6 +231,16 @@ function GuestBookings({ user }) {
           })}
         </div>
       </main>
+      
+      {/* Render the modal when bookingToCancel is set */}
+      {bookingToCancel && (
+          <CancelConfirmationModal
+              bookingCode={bookingToCancel.bookingCode}
+              bnbName={bnbs[bookingToCancel.bnb_id]?.name || 'Booking'}
+              onConfirm={handleExecuteCancel} // Execute cancellation
+              onCancel={() => setBookingToCancel(null)} // Close modal
+          />
+      )}
     </div>
   );
 }

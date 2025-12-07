@@ -453,3 +453,44 @@ def remove_guest_from_booking(booking_id):
         return jsonify({"error": "Database error during guest removal."}), 500
 
     return jsonify({"message": "Secondary guest removed successfully.", "guestId": guest_id}), 200
+
+# ===================================
+# NEW: GUEST CANCEL THEIR OWN BOOKING
+# ===================================
+@booking_bp.route("/guest/booking/<string:booking_code>", methods=["DELETE"])
+@jwt_required()
+def cancel_guest_booking(booking_code):
+    """
+    Guest cancels their own booking by booking code.
+    If they are the only guest, delete the whole booking.
+    If there are multiple guests, just remove this user from it.
+    """
+    user_id = int(get_jwt_identity())
+
+    booking = Booking.query.filter_by(booking_code=booking_code).first()
+    if not booking:
+        return jsonify({"error": "Booking not found"}), 404
+
+    # Check this user is actually linked to the booking
+    link = UserBooking.query.filter_by(
+        user_id=user_id, booking_id=booking.id
+    ).first()
+
+    if not link:
+        return jsonify({"error": "You are not linked to this booking"}), 404
+
+    # If more than one guest, just remove this user from the booking
+    if booking.user_links.count() > 1:
+        db.session.delete(link)
+        db.session.commit()
+        return jsonify({"message": "You have been removed from this booking"}), 200
+
+    # Otherwise, they are the only guest -> delete booking + links + fobs
+    for fb in list(booking.fob_links):
+        db.session.delete(fb)
+
+    db.session.delete(link)
+    db.session.delete(booking)
+    db.session.commit()
+
+    return jsonify({"message": "Booking cancelled"}), 200
