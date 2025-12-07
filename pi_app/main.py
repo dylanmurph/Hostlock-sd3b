@@ -90,6 +90,8 @@ class MyListener(SubscribeCallback):
         if "access" in msg:
             if msg["access"] == "granted":
                 grant_access()
+            elif msg["access"] == "granted_no_face":
+                grant_access_no_face()
             else:
                 deny_access()
 
@@ -196,6 +198,18 @@ def grant_access():
     GPIO.output(LED_GRN, True)
     RELAY.off()
     time.sleep(5)
+    GPIO.output(LED_GRN, False)
+    GPIO.output(LED_RED, True)
+    RELAY.on()
+    
+def grant_access_no_face():
+    GPIO.output(LED_RED, False)
+    GPIO.output(LED_GRN, True)
+    RELAY.off()
+    for _ in range(3):
+                GPIO.output(LED_YEL, True); time.sleep(0.3)
+                GPIO.output(LED_YEL, False); time.sleep(0.3)
+    time.sleep(2)
     GPIO.output(LED_GRN, False)
     GPIO.output(LED_RED, True)
     RELAY.on()
