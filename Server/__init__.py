@@ -82,10 +82,13 @@ def create_app():
     # ------------------------------------------------------------
     # START PUBNUB (Fix for Debug/Reloader Duplication)
     # ------------------------------------------------------------
+    from .hardware_service import HardwareService
+
     # This ensures PubNub only starts in the reloader process (the one that stays alive)
     # OR if debug is off.
     if os.environ.get("WERKZEUG_RUN_MAIN") == "true" or not app.debug:
-        HardwareService.start()
+        # PASS THE 'app' INSTANCE
+        HardwareService.start(app) # <--- MODIFIED: Pass 'app'
     else:
         print("Skipping HardwareService start in main process (waiting for reloader)...")
 

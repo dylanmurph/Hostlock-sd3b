@@ -174,6 +174,8 @@ class AccessLog(db.Model):
     bnb_id = db.Column(db.Integer, db.ForeignKey("bnbs.bnb_id"), nullable=False)
     bnb = db.relationship("BnB", back_populates="access_logs")
 
+    raw_uid = db.Column(db.String(64), nullable=False, index=True)
+
     fob_id = db.Column(db.Integer, db.ForeignKey("fobs.id"))
     fob = db.relationship("Fob", back_populates="access_logs")
 
@@ -202,4 +204,8 @@ class TamperAlert(db.Model):
     bnb_id = db.Column(db.Integer, db.ForeignKey("bnbs.bnb_id"), nullable=False)
     bnb = db.relationship("BnB", back_populates="tamper_alerts")
 
+    tamper_id = db.Column(db.String(64), nullable=False, default="Hardware_Tamper_Alert_1")
+
     triggered_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    snapshot_path = db.Column(db.String(500))
