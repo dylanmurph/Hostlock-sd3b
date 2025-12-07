@@ -21,19 +21,22 @@ AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY")
 AWS_SECRET_KEY = os.getenv("AWS_SECRET_KEY")
 AWS_REGION = os.getenv("AWS_REGION")
 AWS_BUCKET = os.getenv("AWS_BUCKET")
+AWS_REGION_REKOG = os.getenv("AWS_REGION_REKOG")
 
 BASE_DIR = os.path.dirname(__file__)
 IMAGE_DIR = os.path.join(BASE_DIR, "uploads")
-TAMPER_IMAGE_DIR = os.path.join(IMAGE_DIR, "tampers") # Dedicated directory for tamper images
+TAMPER_IMAGE_DIR = os.path.join(IMAGE_DIR, "tampers")
+PROFILE_IMAGE_DIR = os.path.join(IMAGE_DIR, "profile_images") # Directory for reference images
 
 os.makedirs(IMAGE_DIR, exist_ok=True)
-os.makedirs(TAMPER_IMAGE_DIR, exist_ok=True) # Ensure tamper directory exists
+os.makedirs(TAMPER_IMAGE_DIR, exist_ok=True)
+os.makedirs(PROFILE_IMAGE_DIR, exist_ok=True) # Ensure profile directory exists
 
 # Shared Queue for Server-Sent Events (Realtime stream to frontend)
 message_queue = queue.Queue()
 
 # ------------------------------------------------------
-# S3 Helper
+# AWS Clients (S3 & Rekognition)
 # ------------------------------------------------------
 try:
     s3 = boto3.client(
@@ -46,12 +49,22 @@ except Exception as e:
     s3 = None
     print(f"[HardwareService] ERROR: AWS S3 could not initialize: {e}")
 
+try:
+    rekognition = boto3.client(
+        "rekognition",
+        region_name=AWS_REGION_REKOG,
+        aws_access_key_id=AWS_ACCESS_KEY,
+        aws_secret_access_key=AWS_SECRET_KEY,
+    )
+except Exception as e:
+    rekognition = None
+    print(f"[HardwareService] ERROR: AWS Rekognition could not initialize: {e}")
+
+
 def s3_download_and_delete(key: str, event_type: str = "fob") -> str:
     """
     Downloads an image from S3, deletes it from the bucket, and returns 
     the local relative path for database storage.
-
-    The event_type determines the local subdirectory and the returned path.
     """
     if not s3:
         return "error_no_s3_client.jpg"
@@ -78,6 +91,39 @@ def s3_download_and_delete(key: str, event_type: str = "fob") -> str:
         print(f"[HardwareService] ERROR handling S3 file {key}: {e}")
         return "error_download_failed.jpg"
 
+def compare_faces_aws(source_image_path: str, reference_image_path: str) -> bool:
+    """
+    Compares the newly captured image (source) against the profile image (reference).
+    Returns True if they are a match, False otherwise.
+    """
+    if not rekognition:
+        print("[HardwareService] Rekognition client not available.")
+        return False
+
+    try:
+        # Load images into bytes
+        with open(source_image_path, 'rb') as source_file:
+            source_bytes = source_file.read()
+        with open(reference_image_path, 'rb') as ref_file:
+            ref_bytes = ref_file.read()
+
+        response = rekognition.compare_faces(
+            SourceImage={'Bytes': source_bytes},
+            TargetImage={'Bytes': ref_bytes},
+            SimilarityThreshold=85  #confidence threshold
+        )
+
+        # Check if there are any matches in the response
+        if response['FaceMatches']:
+            print(f"[HardwareService] Face Match! Confidence: {response['FaceMatches'][0]['Similarity']}%")
+            return True
+        else:
+            print("[HardwareService] Face Mismatch.")
+            return False
+
+    except Exception as e:
+        print(f"[HardwareService] Rekognition Error: {e}")
+        return False
 
 # ------------------------------------------------------
 # PubNub Listener
@@ -85,15 +131,18 @@ def s3_download_and_delete(key: str, event_type: str = "fob") -> str:
 class PiListener(SubscribeCallback):
     """Handles incoming messages from the Raspberry Pi over PubNub."""
     def message(self, pubnub, event):
+        import os
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        
         msg = event.message
         print(f"[HardwareService] Received: {msg}")
 
-        # 1. Ignore messages sent by the server itself (to prevent logging/PubNub loops)
+        # 1. Ignore messages sent by the server itself
         if msg.get("source") == "server_decision" or msg.get("source") == "server_tamper_ack":
              print(f"[HardwareService] IGNORING server broadcast ({msg.get('source')}).")
              return
 
-        # 2. Push raw message to SSE (for debugging/monitoring)
+        # 2. Push raw message to SSE
         message_queue.put(json.dumps(msg))
 
         # 3. Handle NFC Events (Access Control and Logging)
@@ -108,18 +157,79 @@ class PiListener(SubscribeCallback):
                 return
 
             with app_instance.app_context():
-                # Lazy imports within the context
+                # --- REQUIRED IMPORTS FOR DB LOOKUP ---
                 from . import db 
-                from .models import Fob, AccessLog
+                from .models import Fob, AccessLog, User, UserBooking 
                 
-                # Check access rights against database bookings
+                # Check access rights against database bookings 
                 access_granted, label, booking_id = HardwareService._check_active_booking(uid)
+                
+                # Initialize access variable
                 access = "granted" if access_granted else "denied"
                 
-                # Download image from S3 and get the local path
-                snapshot_path = "N/A"
+                # Download image from S3
+                snapshot_relative_path = "N/A"
+                local_snapshot_path = None
+                
                 if s3_key:
-                    snapshot_path = s3_download_and_delete(s3_key, event_type="fob") 
+                    snapshot_relative_path = s3_download_and_delete(s3_key, event_type="fob")
+                    if not snapshot_relative_path.startswith("error"):
+                         clean_name = os.path.basename(snapshot_relative_path)
+                         local_snapshot_path = os.path.join(IMAGE_DIR, clean_name)
+
+                # --- FACIAL RECOGNITION LOGIC ---
+                face_confidence = 0.0
+                user_id_for_log = None # Variable to store the User ID for logging
+                user_booking_link = None
+                
+                # Only proceed if access was granted by NFC and we have a snapshot
+                if access == "granted" and local_snapshot_path and os.path.exists(local_snapshot_path):
+                    
+                    user_photo_path_db = None
+                    
+                    if booking_id:
+                        # Find the User linked to the active Booking via the UserBooking table
+                        user_booking_link = UserBooking.query.filter_by(booking_id=booking_id).first()
+                        
+                        if user_booking_link:
+                            user_id_for_log = user_booking_link.user_id
+                            # Use the user_id to find the User record and get the photo_path
+                            user_record = User.query.get(user_id_for_log)
+                            user_photo_path_db = user_record.photo_path if user_record else None
+                            
+                    if user_photo_path_db:
+                        
+                        # 3. Construct the ABSOLUTE path using the project base directory (one level up from 'Server')
+                        # The DB path: 'uploads/profile_images/user_2_referenceFace.jpg' is relative to the PROJECT ROOT.
+                        
+                        project_root = os.path.dirname(BASE_DIR)
+                        path_components = user_photo_path_db.split('/')
+                        
+                        # Join project root with the components from the DB path
+                        reference_image_path = os.path.join(project_root, *path_components) 
+
+                        print(f"[HardwareService] Constructed path for file check: {reference_image_path}")
+
+                        if os.path.exists(reference_image_path):
+                            
+                            is_match = compare_faces_aws(local_snapshot_path, reference_image_path)
+                            
+                            if is_match:
+                                print("[HardwareService] AWS Result: FACE MATCH!")
+                                access = "granted" 
+                                face_confidence = 99.0 
+                            else:
+                                print("[HardwareService] AWS Result: FACE MISMATCH.")
+                                access = "granted_no_face"
+                        else:
+                            print(f"[HardwareService] DB path found, but file not on disk: {reference_image_path}")
+                            access = "granted_no_face"
+
+                    else:
+                        print(f"[HardwareService] No User or photo_path linked to active booking {booking_id}.")
+                        access = "granted_no_face" 
+
+                # -----------------------------------------------------------------
 
                 # Create and commit Access Log entry
                 fob_record = Fob.query.filter_by(uid=uid).first()
@@ -128,9 +238,10 @@ class PiListener(SubscribeCallback):
                     raw_uid=uid, 
                     fob_id=fob_record.id if fob_record else None,
                     booking_id=booking_id, 
+                    user_id=user_id_for_log,
                     match_result=access,
-                    face_confidence=0.0, 
-                    snapshot_path=snapshot_path,
+                    face_confidence=face_confidence, 
+                    snapshot_path=snapshot_relative_path,
                     event_type="fob_tap"
                 )
                 db.session.add(new_log)
@@ -143,14 +254,14 @@ class PiListener(SubscribeCallback):
             # Push formatted event to SSE
             message_queue.put(json.dumps({
                 "type": "access_decision", "nfc_uid": uid, "access": access, "label": label, 
-                "booking_id": booking_id, "snapshot": snapshot_path
+                "booking_id": booking_id, "snapshot": snapshot_relative_path
             }))
 
         # 4. Handle Tamper Alerts (Logging to DB with Image)
         if msg.get("event") == "tamper":
             tamper_id = "Hardware_Tamper_Alert_1" 
             bnb_id = 1 
-            s3_key = msg.get("s3_key") # Get the S3 key from the Pi
+            s3_key = msg.get("s3_key")
             
             app_instance = HardwareService._app_instance
             if not app_instance:
@@ -162,16 +273,14 @@ class PiListener(SubscribeCallback):
                 from . import db 
                 from .models import TamperAlert
                 
-                # Download image from S3 and get the local path (uses "tamper" type)
                 snapshot_path = "N/A"
                 if s3_key:
                     snapshot_path = s3_download_and_delete(s3_key, event_type="tamper") 
                 
-                # Create and log the tamper event
                 new_tamper = TamperAlert(
                     bnb_id=bnb_id, 
                     tamper_id=tamper_id,
-                    snapshot_path=snapshot_path # Save the image path
+                    snapshot_path=snapshot_path
                 ) 
                 db.session.add(new_tamper)
                 
@@ -182,16 +291,14 @@ class PiListener(SubscribeCallback):
                     db.session.rollback() 
                     print(f"[HardwareService] DB ERROR logging tamper alert {tamper_id}: {e}")
             
-            # Publish simple alert (used by the Pi to acknowledge the server logged the event)
             HardwareService.publish_tamper_alert(tamper_id, "Tamper detected!")
 
-            # Push formatted event to SSE
             message_queue.put(json.dumps({
                 "type": "tamper_alert", "tamper_id": tamper_id, "bnb_id": bnb_id, "snapshot": snapshot_path
             }))
             
 
-        # 5. Handle S3 Image Events (Fallback for image-only messages)
+        # 5. Handle S3 Image Events (Fallback)
         if "s3_key" in msg and "nfc_uid" not in msg and "event" not in msg:
              filename = s3_download_and_delete(msg["s3_key"])
              message_queue.put(json.dumps({"type": "new_image", "image_filename": filename}))
@@ -207,16 +314,10 @@ class HardwareService:
 
     @staticmethod
     def _get_utc_now():
-        """Returns the current time in UTC with timezone info."""
         return datetime.now(timezone.utc)
 
     @staticmethod
     def _check_active_booking(uid: str) -> tuple[bool, str, int | None]:
-        """
-        Checks the FobBooking table for an active booking linked to the UID.
-        This method must be called within an application context.
-        Returns: (access_granted, label, booking_id)
-        """
         if not HardwareService._app_instance:
              print("[HardwareService] ERROR: App instance not set for DB access.")
              return (False, "Service Error", None)
@@ -247,12 +348,6 @@ class HardwareService:
 
     @staticmethod
     def start(app_instance): 
-        """
-        Initializes the PubNub connection and starts the listener thread.
-        Uses the WERKZEUG_RUN_MAIN environment flag to prevent duplicate initialization 
-        when the Flask reloader is active.
-        """
-        # FIX: Ensure this code only runs in the main Flask process, not the reloader process
         if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
             print("[HardwareService] Skipping PubNub startup in reloader sub-process.")
             return
@@ -282,11 +377,7 @@ class HardwareService:
 
     @staticmethod
     def publish_decision(uid: str, access: str, label: str):
-        """
-        Sends an access control decision (granted/denied) back to the Pi.
-        """
         if not HardwareService._pubnub_instance:
-            # We don't print an error here, as the listener might not be running in the reloader
             return
 
         message = {
@@ -300,9 +391,6 @@ class HardwareService:
 
     @staticmethod
     def publish_tamper_alert(tamper_id: str, msg: str):
-        """
-        Sends an acknowledgement/alert about a tamper event back to the Pi.
-        """
         if not HardwareService._pubnub_instance: return
         
         payload = {
