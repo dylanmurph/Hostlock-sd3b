@@ -348,10 +348,6 @@ class HardwareService:
 
     @staticmethod
     def start(app_instance): 
-        if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
-            print("[HardwareService] Skipping PubNub startup in reloader sub-process.")
-            return
-
         if HardwareService._pubnub_instance is not None:
             print("[HardwareService] PubNub already running (Singleton).")
             return
@@ -399,3 +395,4 @@ class HardwareService:
             "source": "server_tamper_ack" 
         }
         HardwareService._pubnub_instance.publish().channel(CHANNEL).message(payload).sync()
+
