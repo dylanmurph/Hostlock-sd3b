@@ -7,7 +7,7 @@ from pubnub.pnconfiguration import PNConfiguration
 from pubnub.pubnub import PubNub
 from pubnub.callbacks import SubscribeCallback
 from datetime import datetime, timezone
-
+# Removed import: from sqlalchemy.exc import OperationalError 
 # ------------------------------------------------------
 # Configuration & Constants
 # ------------------------------------------------------
@@ -148,7 +148,7 @@ class PiListener(SubscribeCallback):
         # 3. Handle NFC Events (Access Control and Logging)
         if "nfc_uid" in msg:
             uid = msg["nfc_uid"]
-            s3_key = msg.get("s3_key") 
+            s3_key = msg.get("s3_key")
             
             app_instance = HardwareService._app_instance
             if not app_instance:
@@ -157,6 +157,7 @@ class PiListener(SubscribeCallback):
                 return
 
             with app_instance.app_context():
+
                 # --- REQUIRED IMPORTS FOR DB LOOKUP ---
                 from . import db 
                 from .models import Fob, AccessLog, User, UserBooking 
@@ -234,8 +235,8 @@ class PiListener(SubscribeCallback):
                 # Create and commit Access Log entry
                 fob_record = Fob.query.filter_by(uid=uid).first()
                 new_log = AccessLog(
-                    bnb_id=1, 
-                    raw_uid=uid, 
+                    bnb_id=1,
+                    raw_uid=uid,
                     fob_id=fob_record.id if fob_record else None,
                     booking_id=booking_id, 
                     user_id=user_id_for_log,
@@ -245,7 +246,7 @@ class PiListener(SubscribeCallback):
                     event_type="fob_tap"
                 )
                 db.session.add(new_log)
-                db.session.commit()
+                db.session.commit() # The known bug will still happen here if the schema is stale
                 print(f"[HardwareService] LOGGED: Access {access} for UID {uid}")
             
             # Send access decision back to Pi
@@ -270,15 +271,15 @@ class PiListener(SubscribeCallback):
                 return
 
             with app_instance.app_context():
-                from . import db 
+                from . import db
                 from .models import TamperAlert
                 
                 snapshot_path = "N/A"
                 if s3_key:
-                    snapshot_path = s3_download_and_delete(s3_key, event_type="tamper") 
+                    snapshot_path = s3_download_and_delete(s3_key, event_type="tamper")
                 
                 new_tamper = TamperAlert(
-                    bnb_id=bnb_id, 
+                    bnb_id=bnb_id,
                     tamper_id=tamper_id,
                     snapshot_path=snapshot_path
                 ) 
@@ -288,7 +289,7 @@ class PiListener(SubscribeCallback):
                     db.session.commit()
                     print(f"[HardwareService] LOGGED: Tamper Alert ID: {tamper_id} with image {snapshot_path}")
                 except Exception as e:
-                    db.session.rollback() 
+                    db.session.rollback()
                     print(f"[HardwareService] DB ERROR logging tamper alert {tamper_id}: {e}")
             
             HardwareService.publish_tamper_alert(tamper_id, "Tamper detected!")
@@ -325,24 +326,24 @@ class HardwareService:
         now = HardwareService._get_utc_now()
         
         with HardwareService._app_instance.app_context():
-             from . import db 
-             from .models import Fob, FobBooking 
-             
+             from . import db
+             from .models import Fob, FobBooking
+            
              active_fob_booking = (
                  db.session.query(FobBooking)
                  .join(Fob) 
                  .filter(Fob.uid == uid, FobBooking.is_active == True, FobBooking.active_from <= now, FobBooking.active_until >= now)
                  .first()
              )
-        
+            
              if active_fob_booking:
                  fob = db.session.get(Fob, active_fob_booking.fob_id)
                  label = fob.label if fob and fob.label else f"Fob ID: {fob.id}"
                  return (True, label, active_fob_booking.booking_id)
-             
+            
              fob_record = Fob.query.filter_by(uid=uid).first()
              label = fob_record.label if fob_record and fob_record.label else "Unknown UID"
-             
+        
              return (False, label, None)
 
 
