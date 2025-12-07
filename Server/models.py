@@ -74,7 +74,7 @@ class BnB(db.Model):
 
     id = db.Column("bnb_id", db.Integer, primary_key=True)
     unique_code = db.Column(db.String(64), unique=True, nullable=False)
-    name = db.Column(db.String(255), nullable=False)
+    name = db.Column(db.String(255), unique=True, nullable=False)
 
     host_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     host = db.relationship("User", back_populates="hosted_bnbs")

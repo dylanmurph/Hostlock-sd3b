@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
-import { AlertTriangle, User, TrendingDown, Bell } from 'lucide-react';
+import { AlertTriangle, User, TrendingDown, Bell, Home, Plus, X } from 'lucide-react'; 
 
 const API_ENDPOINTS = {
     bookings: "/host/get/bookings",
     accessLogTemplate: (bookingCode) => `/guest/access/${bookingCode}/history`,
     alerts: "/host/get/alerts",
+    hostBnbs: "/host/bnbs", 
+    createBnb: "/bnbs",
 };
 
 function mapApiAlertsToDashboard(apiAlerts) {
@@ -17,15 +19,59 @@ function mapApiAlertsToDashboard(apiAlerts) {
         type: 'unauthorized',
     }));
 }
-// ---------------------------------------------------------------------------------
-
 
 const HostHome = () => {
     const [guests, setGuests] = useState([]);
     const [accessLogs, setAccessLogs] = useState([]);
     const [alerts, setAlerts] = useState([]);
+    const [bnbs, setBnbs] = useState([]); 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    
+    const [isAdding, setIsAdding] = useState(false);
+    const [newBnbName, setNewBnbName] = useState('');
+    const [addError, setAddError] = useState(null);
+
+    const fetchBnbs = async () => {
+        try {
+            const bnbsRes = await api.get(API_ENDPOINTS.hostBnbs);
+            setBnbs(bnbsRes.data || []);
+            return bnbsRes.data || [];
+        } catch (err) {
+            console.error("Failed to fetch BnBs:", err);
+            setError("Could not load properties.");
+            return [];
+        }
+    }
+
+    const handleCreateBnb = async (e) => {
+        e.preventDefault();
+        setAddError(null);
+
+        if (!newBnbName.trim()) {
+            setAddError("Property name cannot be empty.");
+            return;
+        }
+
+        try {
+            const res = await api.post(API_ENDPOINTS.createBnb, {
+                name: newBnbName.trim(),
+            });
+
+            // 1. Update the BnB list with the new property
+            setBnbs(prevBnbs => [...prevBnbs, { id: res.data.id, name: res.data.name }]);
+            
+            // 2. Reset the form state
+            setNewBnbName('');
+            setIsAdding(false);
+            alert(`Property "${res.data.name}" created successfully! Code: ${res.data.unique_code}`);
+
+        } catch (err) {
+            const errorMsg = err.response?.data?.msg || "Failed to create BnB. Check server logs.";
+            setAddError(errorMsg);
+            console.error("BnB creation failed:", err);
+        }
+    };
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -33,19 +79,21 @@ const HostHome = () => {
             setError(null);
             
             try {
-                // 1. Fetch Host Alerts (Tamper Alerts)
+                // Fetch Alerts
                 const alertRes = await api.get(API_ENDPOINTS.alerts);
                 const fetchedAlerts = mapApiAlertsToDashboard(alertRes.data || []);
                 setAlerts(fetchedAlerts);
                 
-                // 2. Fetch all Bookings for the host
+                // Fetch BnBs
+                const bookings = await fetchBnbs();
+                
+                // Fetch all Bookings for the host
                 const bookingRes = await api.get(API_ENDPOINTS.bookings);
-                const bookings = bookingRes.data || [];
-                setGuests(bookings);
+                const fetchedBookings = bookingRes.data || [];
+                setGuests(fetchedBookings);
 
-                // 3. Fetch Access Logs for each booking
-                const logsPromises = bookings.map(async (b) => {
-                    // Check if the route exists before fetching logs
+                // Fetch Access Logs for each booking
+                const logsPromises = fetchedBookings.map(async (b) => {
                     if (b.bookingCode) {
                         try {
                             const logRes = await api.get(API_ENDPOINTS.accessLogTemplate(b.bookingCode));
@@ -103,6 +151,69 @@ const HostHome = () => {
                         <span>{error}</span>
                     </div>
                 )}
+
+                {/* BnB List Section */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:p-5">
+                    
+                    <div className="flex justify-between items-center mb-3">
+                        <h2 className="text-base md:text-lg font-semibold">
+                            <Home className="inline w-5 h-5 mr-2 text-slate-700" />
+                            Your Properties ({bnbs.length})
+                        </h2>
+                        {/* The Add BnB Button/Toggle */}
+                        <button 
+                            onClick={() => setIsAdding(!isAdding)}
+                            className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors"
+                        >
+                            {isAdding ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                            <span>{isAdding ? 'Cancel' : 'Add New Property'}</span>
+                        </button>
+                    </div>
+
+                    {/* New BnB Creation Form */}
+                    {isAdding && (
+                        <form onSubmit={handleCreateBnb} className="mb-4 p-4 border border-slate-200 rounded-xl bg-slate-50">
+                            <h3 className="text-sm font-semibold mb-2 text-slate-700">Add Property Details</h3>
+                            <div className="flex gap-2 items-start">
+                                <input
+                                    type="text"
+                                    placeholder="Enter Property Name (e.g., 'Coastal Retreat')"
+                                    value={newBnbName}
+                                    onChange={(e) => setNewBnbName(e.target.value)}
+                                    className="flex-1 p-2 border border-slate-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
+                                />
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+                                >
+                                    Create BnB
+                                </button>
+                            </div>
+                            {addError && (
+                                <p className="mt-2 text-xs text-red-600 flex items-center">
+                                    <AlertTriangle className="w-3 h-3 mr-1" />
+                                    {addError}
+                                </p>
+                            )}
+                        </form>
+                    )}
+
+                    {/* List of Existing BnBs */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {bnbs.length > 0 ? (
+                            bnbs.map((bnb) => (
+                                <div 
+                                    key={bnb.id} 
+                                    className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm font-medium text-blue-800"
+                                >
+                                    {bnb.name}
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-sm text-slate-500 col-span-full">No properties registered yet.</p>
+                        )}
+                    </div>
+                </div>
 
                 {/* Stats cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
