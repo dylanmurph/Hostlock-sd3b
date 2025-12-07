@@ -204,7 +204,9 @@ class TamperAlert(db.Model):
     bnb_id = db.Column(db.Integer, db.ForeignKey("bnbs.bnb_id"), nullable=False)
     bnb = db.relationship("BnB", back_populates="tamper_alerts")
 
-    tamper_id = db.Column(db.String(64), nullable=False, default="Hardware_Tamper_Alert_1")
+    tamper_id = db.Column(db.String(64), nullable=False, default="Dundalk Apartments Tamper")
+
+    status = db.Column(db.String(32), nullable=False, default="pending", index=True)
 
     triggered_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
 
