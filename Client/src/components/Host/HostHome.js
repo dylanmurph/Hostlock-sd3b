@@ -1,30 +1,22 @@
-import React, { useState, useEffect } from "react";
-import api from "../../api";
-import {
-  AlertTriangle,
-  User,
-  TrendingDown,
-  Bell,
-  Home,
-  Plus,
-  X,
-} from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import api from '../../api';
+import { AlertTriangle, User, TrendingDown, Bell, Home, Plus, X } from 'lucide-react';
 
 const API_ENDPOINTS = {
-  bookings: "/host/get/bookings",
+  bookings: '/host/get/bookings',
   accessLogTemplate: (bookingCode) => `/guest/access/${bookingCode}/history`,
-  alerts: "/host/get/alerts",
-  hostBnbs: "/host/bnbs",
-  createBnb: "/bnbs",
+  alerts: '/host/get/alerts',
+  hostBnbs: '/host/bnbs',
+  createBnb: '/bnbs',
 };
 
 function mapApiAlertsToDashboard(apiAlerts) {
   return apiAlerts.map((alert) => ({
     id: alert.alertId,
     message: `${alert.bnbName}: Tamper Alert triggered.`,
-    status: "Pending",
+    status: 'Pending',
     time: alert.triggeredAt,
-    type: "unauthorized",
+    type: 'unauthorized',
   }));
 }
 
@@ -37,7 +29,7 @@ const HostHome = () => {
   const [error, setError] = useState(null);
 
   const [isAdding, setIsAdding] = useState(false);
-  const [newBnbName, setNewBnbName] = useState("");
+  const [newBnbName, setNewBnbName] = useState('');
   const [addError, setAddError] = useState(null);
 
   const fetchBnbs = async () => {
@@ -46,8 +38,8 @@ const HostHome = () => {
       setBnbs(bnbsRes.data || []);
       return bnbsRes.data || [];
     } catch (err) {
-      console.error("Failed to fetch BnBs:", err);
-      setError("Could not load properties.");
+      console.error('Failed to fetch BnBs:', err);
+      setError('Could not load properties.');
       return [];
     }
   };
@@ -57,7 +49,7 @@ const HostHome = () => {
     setAddError(null);
 
     if (!newBnbName.trim()) {
-      setAddError("Property name cannot be empty.");
+      setAddError('Property name cannot be empty.');
       return;
     }
 
@@ -66,22 +58,16 @@ const HostHome = () => {
         name: newBnbName.trim(),
       });
 
-      setBnbs((prevBnbs) => [
-        ...prevBnbs,
-        { id: res.data.id, name: res.data.name },
-      ]);
-
-      setNewBnbName("");
+      setBnbs((prevBnbs) => [...prevBnbs, { id: res.data.id, name: res.data.name }]);
+      setNewBnbName('');
       setIsAdding(false);
       alert(
-        `Property "${res.data.name}" created successfully! Code: ${res.data.unique_code}`
+        `Property "${res.data.name}" created successfully! Code: ${res.data.unique_code}`,
       );
     } catch (err) {
-      const errorMsg =
-        err.response?.data?.msg ||
-        "Failed to create BnB. Check server logs.";
+      const errorMsg = err.response?.data?.msg || 'Failed to create BnB. Check server logs.';
       setAddError(errorMsg);
-      console.error("BnB creation failed:", err);
+      console.error('BnB creation failed:', err);
     }
   };
 
@@ -96,7 +82,7 @@ const HostHome = () => {
         const fetchedAlerts = mapApiAlertsToDashboard(alertRes.data || []);
         setAlerts(fetchedAlerts);
 
-        // BnBs
+        // Properties
         await fetchBnbs();
 
         // Bookings
@@ -104,12 +90,12 @@ const HostHome = () => {
         const fetchedBookings = bookingRes.data || [];
         setGuests(fetchedBookings);
 
-        // Access logs
+        // Access logs per booking
         const logsPromises = fetchedBookings.map(async (b) => {
           if (b.bookingCode) {
             try {
               const logRes = await api.get(
-                API_ENDPOINTS.accessLogTemplate(b.bookingCode)
+                API_ENDPOINTS.accessLogTemplate(b.bookingCode),
               );
               return logRes.data.map((log) => ({
                 bookingCode: b.bookingCode,
@@ -119,7 +105,7 @@ const HostHome = () => {
             } catch (logErr) {
               console.warn(
                 `Could not fetch logs for booking ${b.bookingCode}:`,
-                logErr
+                logErr,
               );
               return [];
             }
@@ -130,8 +116,8 @@ const HostHome = () => {
         const allLogs = await Promise.all(logsPromises);
         setAccessLogs(allLogs.flat());
       } catch (err) {
-        console.error("Failed to fetch dashboard data:", err);
-        setError("Could not load all dashboard data. Check API connectivity.");
+        console.error('Failed to fetch dashboard data:', err);
+        setError('Could not load all dashboard data. Check API connectivity.');
       } finally {
         setLoading(false);
       }
@@ -140,30 +126,27 @@ const HostHome = () => {
     fetchDashboardData();
   }, []);
 
-  if (loading)
-    return <div className="p-4 text-slate-500">Loading dashboard data...</div>;
+  if (loading) return <div className="p-4 text-slate-500">Loading dashboard data...</div>;
 
-  const activeGuests = guests.filter(
-    (g) =>
-      g.status === "Active" ||
-      (g.check_in_time &&
-        g.check_out_time &&
-        new Date(g.check_in_time) < new Date() &&
-        new Date(g.check_out_time) > new Date())
-  ).length;
+  const activeGuests =
+    guests.filter(
+      (g) =>
+        g.status === 'Active' ||
+        (g.check_in_time &&
+          g.check_out_time &&
+          new Date(g.check_in_time) < new Date() &&
+          new Date(g.check_out_time) > new Date()),
+    ).length;
 
-  const failedAttempts = accessLogs.filter(
-    (log) => log.status === "MATCH_FAILURE"
-  ).length;
-
-  const pendingAlerts = alerts.filter((a) => a.status === "Pending").length;
+  const failedAttempts = accessLogs.filter((log) => log.status === 'MATCH_FAILURE').length;
+  const pendingAlerts = alerts.filter((a) => a.status === 'Pending').length;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      <main className="flex-1 p-4 md:p-6 space-y-4 md:space-y-6 max-w-3xl mx-auto">
+      <main className="flex-1 p-4 md:p-6 space-y-4 md:space-y-6">
         {/* Header */}
         <header>
-          <h1 className="text-slate-900 mb-1 text-xl md:text-2xl font-semibold">
+          <h1 className="text-slate-900 mb-2 text-lg md:text-2xl font-semibold">
             Host Dashboard
           </h1>
           <p className="text-slate-600 text-sm md:text-base">
@@ -178,92 +161,7 @@ const HostHome = () => {
           </div>
         )}
 
-        {/* BnB List Section */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-5 space-y-3">
-          <div className="flex justify-between items-center gap-3">
-            <h2 className="flex items-center gap-2 text-sm md:text-base font-semibold text-slate-900">
-              <Home className="w-5 h-5 text-slate-700" />
-              <span className="whitespace-nowrap">Your Properties</span>
-              <span className="text-xs text-slate-500">
-                ({bnbs.length})
-              </span>
-            </h2>
-
-            {/* Toggle add form */}
-            <button
-              onClick={() => setIsAdding(!isAdding)}
-              className="flex items-center gap-1 px-4 py-2 text-xs md:text-sm bg-blue-600 text-white rounded-full shadow hover:bg-blue-700 transition-colors"
-            >
-              {isAdding ? (
-                <>
-                  <X className="w-4 h-4" />
-                  <span>Cancel</span>
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  <span>Add New Property</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* New BnB Creation Form */}
-          {isAdding && (
-            <form
-              onSubmit={handleCreateBnb}
-              className="p-4 border border-slate-200 rounded-xl bg-slate-50 space-y-3"
-            >
-              <h3 className="text-sm font-semibold text-slate-700">
-                Add Property Details
-              </h3>
-
-              <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-                <input
-                  type="text"
-                  placeholder="Enter Property Name (e.g. 'Coastal Retreat')"
-                  value={newBnbName}
-                  onChange={(e) => setNewBnbName(e.target.value)}
-                  className="w-full sm:flex-1 p-2 border border-slate-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
-                />
-                <button
-                  type="submit"
-                  className="w-full sm:w-auto px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  Create BnB
-                </button>
-              </div>
-
-              {addError && (
-                <p className="mt-1 text-xs text-red-600 flex items-center">
-                  <AlertTriangle className="w-3 h-3 mr-1" />
-                  {addError}
-                </p>
-              )}
-            </form>
-          )}
-
-          {/* List / Empty state */}
-          {bnbs.length === 0 ? (
-            <div className="mt-1 px-4 py-3 rounded-xl bg-slate-50 border border-dashed border-slate-300 text-xs md:text-sm text-slate-500 text-center">
-              No properties registered yet. Add your first property to get
-              started.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-1">
-              {bnbs.map((bnb) => (
-                <div
-                  key={bnb.id}
-                  className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm font-medium text-blue-800"
-                >
-                  {bnb.name}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Stats cards */}
+        {/* 1. Stats cards – now FIRST */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <DashboardCard
             title="Current Guests"
@@ -281,8 +179,8 @@ const HostHome = () => {
             value="Online"
             valueClass="text-green-700"
             icon={
-              <div className="flex items-center">
-                <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1" />
+              <div className="inline-flex items-center">
+                <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-2" />
               </div>
             }
           />
@@ -294,8 +192,75 @@ const HostHome = () => {
           />
         </div>
 
-        {/* Recent alerts */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+        {/* 2. Properties block – moved UNDER stats */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:p-5">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-base md:text-lg font-semibold">
+              <Home className="inline w-5 h-5 mr-2 text-slate-700" />
+              Your Properties ({bnbs.length})
+            </h2>
+
+            <button
+              onClick={() => setIsAdding(!isAdding)}
+              className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors"
+            >
+              {isAdding ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              <span>{isAdding ? 'Cancel' : 'Add New Property'}</span>
+            </button>
+          </div>
+
+          {isAdding && (
+            <form
+              onSubmit={handleCreateBnb}
+              className="mb-4 p-4 border border-slate-200 rounded-xl bg-slate-50"
+            >
+              <h3 className="text-sm font-semibold mb-2 text-slate-700">
+                Add Property Details
+              </h3>
+              <div className="flex gap-2 items-start">
+                <input
+                  type="text"
+                  placeholder="Enter Property Name (e.g., 'Coastal Retreat')"
+                  value={newBnbName}
+                  onChange={(e) => setNewBnbName(e.target.value)}
+                  className="flex-1 p-2 border border-slate-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+                >
+                  Create BnB
+                </button>
+              </div>
+              {addError && (
+                <p className="mt-2 text-xs text-red-600 flex items-center">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  {addError}
+                </p>
+              )}
+            </form>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {bnbs.length > 0 ? (
+              bnbs.map((bnb) => (
+                <div
+                  key={bnb.id}
+                  className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm font-medium text-blue-800"
+                >
+                  {bnb.name}
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-slate-500 col-span-full">
+                No properties registered yet.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* 3. Recent alerts – now LAST section */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
           <div className="border-b px-4 py-3 md:px-5 md:py-4">
             <h2 className="text-base md:text-lg font-semibold">Recent Alerts</h2>
             <p className="text-xs md:text-sm text-slate-500">
@@ -332,13 +297,8 @@ const HostHome = () => {
   );
 };
 
-const DashboardCard = ({
-  title,
-  value,
-  valueClass = "font-semibold",
-  icon,
-}) => (
-  <div className="bg-white rounded-2xl shadow-sm p-3 md:p-4 flex flex-col justify-between border border-slate-200">
+const DashboardCard = ({ title, value, valueClass = 'font-semibold', icon }) => (
+  <div className="bg-white rounded-2xl shadow-sm p-3 md:p-4 flex flex-col justify-between border border-slate-100">
     <div className="flex items-center justify-between mb-1">
       <p className="text-xs md:text-sm text-slate-500">{title}</p>
       {icon}
