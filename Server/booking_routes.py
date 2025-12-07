@@ -37,6 +37,7 @@ def get_guest_bookings():
 
     return jsonify(data), 200
 
+
 @booking_bp.route("/host/get/bookings", methods=["GET"])
 @jwt_required()
 def get_host_bookings():
@@ -92,6 +93,7 @@ def get_host_bookings():
 
     return jsonify(data), 200
 
+
 @booking_bp.route("/booking/uploadImage", methods=["POST"])
 @jwt_required()
 def upload_profile_image():
@@ -127,7 +129,8 @@ def upload_profile_image():
         "message": "Profile image uploaded",
         "file_path": file_path
     }), 200
-    
+
+
 @booking_bp.route("/booking/getImage", methods=["GET"])
 @jwt_required()
 def get_user_profile():
@@ -141,6 +144,7 @@ def get_user_profile():
         "email": user.email,
         "photo_path": user.photo_path
     }), 200
+
 
 @booking_bp.route("/booking/createBooking", methods=["POST"])
 def create_booking():
@@ -217,6 +221,7 @@ def create_booking():
         "status": "Active"
     }), 201
 
+
 @booking_bp.route("/bookings/<int:booking_id>", methods=["GET"])
 @jwt_required()
 def get_booking(booking_id):
@@ -265,3 +270,77 @@ def list_current_bookings_for_bnb(bnb_id):
     - Ensure caller has permission to view this BnB.
     """
     return jsonify([]), 200
+
+
+# ================================
+# NEW: HOST DELETE BOOKING BY ID
+# ================================
+@booking_bp.route("/booking/<int:booking_id>", methods=["DELETE"])
+@jwt_required()
+def delete_booking(booking_id):
+    """Host deletes a booking they own."""
+    host_id = int(get_jwt_identity())
+
+    booking = Booking.query.get(booking_id)
+    if not booking:
+        return jsonify({"error": "Booking not found"}), 404
+
+    # Make sure this host owns the BnB
+    if booking.bnb.host_id != host_id:
+        return jsonify({"error": "Not authorized to delete this booking"}), 403
+
+    # Delete fob links
+    for fb in list(booking.fob_links):
+        db.session.delete(fb)
+
+    # Delete user links
+    for ub in list(booking.user_links):
+        db.session.delete(ub)
+
+    # Delete booking itself
+    db.session.delete(booking)
+    db.session.commit()
+
+    return jsonify({"message": "Booking deleted"}), 200
+
+
+# ===================================
+# NEW: GUEST CANCEL THEIR OWN BOOKING
+# ===================================
+@booking_bp.route("/guest/booking/<string:booking_code>", methods=["DELETE"])
+@jwt_required()
+def cancel_guest_booking(booking_code):
+    """
+    Guest cancels their own booking by booking code.
+    If they are the only guest, delete the whole booking.
+    If there are multiple guests, just remove this user from it.
+    """
+    user_id = int(get_jwt_identity())
+
+    booking = Booking.query.filter_by(booking_code=booking_code).first()
+    if not booking:
+        return jsonify({"error": "Booking not found"}), 404
+
+    # Check this user is actually linked to the booking
+    link = UserBooking.query.filter_by(
+        user_id=user_id, booking_id=booking.id
+    ).first()
+
+    if not link:
+        return jsonify({"error": "You are not linked to this booking"}), 404
+
+    # If more than one guest, just remove this user from the booking
+    if len(booking.user_links) > 1:
+        db.session.delete(link)
+        db.session.commit()
+        return jsonify({"message": "You have been removed from this booking"}), 200
+
+    # Otherwise, they are the only guest -> delete booking + links + fobs
+    for fb in list(booking.fob_links):
+        db.session.delete(fb)
+
+    db.session.delete(link)
+    db.session.delete(booking)
+    db.session.commit()
+
+    return jsonify({"message": "Booking cancelled"}), 200
