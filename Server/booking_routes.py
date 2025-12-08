@@ -56,8 +56,13 @@ def get_host_bookings():
                       "Upcoming" if now < check_in else 
                       "Checked Out")
             
-            # Get Fob UID
-            fob_uid = booking.fob_links[0].fob.uid if booking.fob_links else None
+            fob_uid = None
+            fob_label = None
+            if booking.fob_links:
+                fob_booking_link = booking.fob_links[0] 
+                fob = fob_booking_link.fob 
+                fob_uid = fob.uid
+                fob_label = fob.label
 
             # Generate data for all linked guests
             for user_booking in booking.user_links:
@@ -76,7 +81,8 @@ def get_host_bookings():
                     "isPrimaryGuest": user_booking.is_primary_guest,
                     "status": status,
                     "fobUID": fob_uid,
-                    "bookingId": booking.id
+                    "bookingId": booking.id,
+                    "fobLabel": fob_label
                 })
 
     return jsonify(data), 200

@@ -43,7 +43,7 @@ export function HostGuests() {
                     bookingCode: g.bookingCode || "",
                     checkIn: g.checkIn ? g.checkIn.substring(0, 16) : "",
                     checkOut: g.checkOut ? g.checkOut.substring(0, 16) : "",
-                    nfcId: g.fobUID || "",
+                    nfcId: g.fob_label || "",
                     property: g.bnbName || "",
                     status: g.status || "Active",
                 }));
@@ -344,7 +344,7 @@ export function HostGuests() {
                                             <span>{guest.property}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-slate-500">Fob UID:</span>
+                                            <span className="text-slate-500">Fob ID:</span>
                                             <span>{guest.nfcId || "N/A"}</span>
                                         </div>
                                     </div>
