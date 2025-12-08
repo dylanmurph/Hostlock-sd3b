@@ -2,30 +2,33 @@ import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 
 const EditModal = ({ modalData, onCancel, onSubmit }) => {
-    if (!modalData) return null;
-
+    const isOpen = !!modalData;
     const isEdit = modalData?.type === "edit";
-    const { type, guest } = modalData;
+    const guest = modalData?.guest || {};
+    const type = modalData?.type || "edit";
 
     // bookingCode for edit, label (nfcId) for fob
-    const initialValue = isEdit
-        ? guest.bookingCode
-        : guest.nfcId || "";
+    const initialValue = isEdit ? guest.bookingCode : guest.nfcId || "";
 
     const [inputValue, setInputValue] = useState(initialValue);
 
     useEffect(() => {
+        if (!modalData) return; // safe inside effect
+
         const nextValue = isEdit
-            ? modalData?.guest.bookingCode
-            : modalData?.guest.nfcId || "";
+            ? modalData.guest.bookingCode
+            : modalData.guest.nfcId || "";
+
         setInputValue(nextValue);
-    }, [modalData?.guest.id, modalData?.type]);
+    }, [modalData, isEdit]);
+
+    if (!isOpen) return null;
 
     const title = isEdit
         ? `Edit Booking for ${guest.name}`
         : `Assign Fob for ${guest.name}`;
 
-    // 🔁 changed these to use label instead of UID wording
+    // use label instead of UID wording
     const label = isEdit ? "New Booking Code" : "Fob Label";
     const placeholder = isEdit ? "BK-2025-XXXX" : "e.g., Fob 1";
     const submitText = isEdit ? "Update Booking" : "Assign Fob";
