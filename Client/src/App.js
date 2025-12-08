@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import api from "./api";
 
@@ -68,17 +68,44 @@ function App() {
     if (u) {
       localStorage.setItem("user", JSON.stringify(u));
       localStorage.setItem("token", u.token);
+      if (u.refresh_token) localStorage.setItem("refresh_token", u.refresh_token);
     } else {
       localStorage.removeItem("user");
       localStorage.removeItem("token");
+      localStorage.removeItem("refresh_token");
     }
     setUser(u);
   };
 
+  // Refresh access token on page load if refresh token exists
+  useEffect(() => {
+    const attemptRefreshOnMount = async () => {
+      if (!user) return;
+      const refresh = localStorage.getItem("refresh_token") || user?.refresh_token;
+      if (!refresh) return;
+      try {
+        const resp = await api.post("/refresh", {}, {
+          headers: { Authorization: `Bearer ${refresh}` }
+        });
+        if (resp.data.access_token) {
+          const newAccess = resp.data.access_token;
+          const newRefresh = resp.data.refresh_token;
+          const updated = { ...user, token: newAccess };
+          if (newRefresh) updated.refresh_token = newRefresh;
+          handleSetUser(updated);
+        }
+      } catch (err) {
+        console.warn("Failed to refresh token on mount:", err.message);
+      }
+    };
+    attemptRefreshOnMount();
+  }, []);
+
   // Log Out
   const handleLogout = async () => {
     try {
-      await api.post("/logout");
+      const refresh = localStorage.getItem("refresh_token") || (JSON.parse(localStorage.getItem("user"))?.refresh_token);
+      await api.post("/logout", { refresh_token: refresh });
     } catch (err) {
       console.error("Logout request failed:", err);
     }

@@ -1,6 +1,14 @@
 from flask import Blueprint, request, jsonify
 from .models import (db, User, BnB, Booking, UserBooking, Fob, FobBooking, AccessLog, TamperAlert, UserRole,)
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import (
+    create_access_token,
+    create_refresh_token,
+    jwt_required,
+    get_jwt_identity,
+    get_jwt,
+    decode_token,
+)
+from .models import RevokedToken
 from datetime import datetime
 import re
 from . import bcrypt
@@ -88,7 +96,6 @@ def update_me():
         200,
     )
 
-
 @auth_bp.route("/register", methods=["POST"])
 def register():
     data = request.get_json(force=True)
@@ -125,12 +132,17 @@ def register():
             identity=str(user.id),
             additional_claims={"role": user.role}
         )
+        refresh_token = create_refresh_token(
+            identity=str(user.id),
+            additional_claims={"role": user.role}
+        )
 
         return (
             jsonify(
                 {
                     "message": f"{role.capitalize()} registered successfully",
                     "access_token": access_token,
+                    "refresh_token": refresh_token,
                     "user_id": user.id,
                     "name": user.name,
                     "email": user.email,
@@ -143,7 +155,6 @@ def register():
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": "Error registering user", "error": str(e)}), 500
-
 
 @auth_bp.route("/login", methods=["POST"])
 def login():
@@ -163,12 +174,17 @@ def login():
         identity=str(user.id),
         additional_claims={"role": user.role}
     )
+    refresh_token = create_refresh_token(
+        identity=str(user.id),
+        additional_claims={"role": user.role}
+    )
 
     return (
         jsonify(
             {
                 "message": "Login successful",
                 "access_token": access_token,
+                "refresh_token": refresh_token,
                 "user_id": user.id,
                 "name": user.name,
                 "email": user.email,
@@ -178,3 +194,78 @@ def login():
         ),
         200,
     )
+
+@auth_bp.route("/logout", methods=["POST"])
+@jwt_required(optional=True)
+def logout():
+    """Logout and revoke tokens.
+
+    This endpoint will revoke the token presented in the Authorization
+    header (if any). If the client sends a JSON body with a
+    `refresh_token` value, that token will also be revoked. This allows
+    the client to ensure both access and refresh tokens are invalidated.
+    """
+    # Try to revoke token presented in Authorization header (if present)
+    try:
+        jwt_data = get_jwt()
+    except Exception:
+        jwt_data = None
+
+    revoked = []
+    try:
+        if jwt_data:
+            jti = jwt_data.get("jti")
+            if jti and not RevokedToken.query.filter_by(jti=jti).first():
+                RevokedToken.query.session.add(RevokedToken(jti=jti))
+                revoked.append(jti)
+
+        # Also accept a refresh token in the request body to revoke it
+        data = request.get_json(silent=True) or {}
+        refresh_token = data.get("refresh_token")
+        if refresh_token:
+            try:
+                decoded = decode_token(refresh_token)
+                jti2 = decoded.get("jti")
+                if jti2 and not RevokedToken.query.filter_by(jti=jti2).first():
+                    RevokedToken.query.session.add(RevokedToken(jti=jti2))
+                    revoked.append(jti2)
+            except Exception:
+                # ignore decode errors
+                pass
+
+        if revoked:
+            db.session.commit()
+        return jsonify({"message": "Logout successful", "revoked": revoked}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Error during logout", "error": str(e)}), 500
+
+@auth_bp.route("/refresh", methods=["POST"])
+@jwt_required(refresh=True)
+def refresh():
+    """Exchange a valid refresh token for new tokens (access + rotated refresh).
+
+    Client should send the refresh token as the Bearer token in the
+    Authorization header. Returns both a new access token and a new refresh token
+    (refresh-token rotation for enhanced security).
+    """
+    identity = get_jwt_identity()
+    claims = get_jwt() or {}
+    # include role claim in new tokens if present
+    additional = {}
+    if "role" in claims:
+        additional["role"] = claims.get("role")
+
+    new_access = create_access_token(identity=str(identity), additional_claims=additional)
+    new_refresh = create_refresh_token(identity=str(identity), additional_claims=additional)
+
+    # Revoke the old refresh token (rotation for enhanced security)
+    try:
+        old_jti = claims.get("jti")
+        if old_jti and not RevokedToken.query.filter_by(jti=old_jti).first():
+            RevokedToken.query.session.add(RevokedToken(jti=old_jti))
+            db.session.commit()
+    except Exception:
+        pass  # ignore revocation errors
+
+    return jsonify({"access_token": new_access, "refresh_token": new_refresh}), 200

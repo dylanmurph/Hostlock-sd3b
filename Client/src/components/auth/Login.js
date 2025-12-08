@@ -20,7 +20,8 @@ function Login({ setUser }) {
     try {
       const res = await api.post("/login", { email, password });
 
-      const token = res.data.access_token;
+      const access = res.data.access_token;
+      const refresh = res.data.refresh_token;
 
       const userData = {
         user_id: res.data.user_id,
@@ -28,11 +29,13 @@ function Login({ setUser }) {
         email: res.data.email,
         role: res.data.role,
         photo: res.data.photo_path,
-        token: token,
+        token: access,
+        refresh_token: refresh,
       };
 
-      // store token/user if you want it later
-      localStorage.setItem("token", token);
+      // store tokens/user for later use
+      if (access) localStorage.setItem("token", access);
+      if (refresh) localStorage.setItem("refresh_token", refresh);
       localStorage.setItem("user", JSON.stringify(userData));
 
       setUser(userData);
