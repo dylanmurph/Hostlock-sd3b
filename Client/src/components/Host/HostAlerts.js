@@ -59,19 +59,35 @@ export function HostAlerts() {
     fetchHostAlerts();
   }, []);
 
-  // Mark a single alert as resolved (UI-state only for now)
-  const handleMarkResolved = (alertId) => {
-    setAlerts((prev) =>
-      prev.map((a) =>
-        a.id === alertId
-          ? {
-              ...a,
-              status: "Resolved",
-            }
-          : a
-      )
-    );
-  };
+ // Function to handle marking an alert as resolved
+const handleMarkResolved = async (alertId) => {
+  // Add a small local status indicator if you want, but focus on the API call
+  try {
+    // 1. Send API request to resolve the alert
+    // Use the alertId to target the specific database entry
+    const res = await api.put(`/host/alerts/resolve/${alertId}`);
+
+    // 2. Check for success (e.g., status 200 or 204)
+    if (res.status === 200 || res.status === 204) {
+      // 3. ONLY update the local state if the API call was successful
+      setAlerts((prev) =>
+        prev.map((a) =>
+          a.id === alertId
+            ? {
+                ...a,
+                status: "Resolved",
+              }
+            : a
+        )
+      );
+      // Optional: Add a success message notification here
+    }
+  } catch (err) {
+    console.error("Error marking alert as resolved:", err.response || err.message);
+    // Notify the user of the failure
+    alert("Failed to mark alert as resolved. Please try again.");
+  }
+};
 
   // Loading and Error States
   if (loading) {

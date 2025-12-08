@@ -72,3 +72,37 @@ def get_tamper_alerts_for_bnb(bnb_id):
         })
 
     return jsonify(data), 200
+
+@tamper_bp.route("/host/alerts/resolve/<int:alert_id>", methods=["PUT"])
+@jwt_required()
+def resolve_host_alert(alert_id):
+    """
+    Marks a specific TamperAlert as 'resolved' after verifying host ownership.
+    """
+    host_id = int(get_jwt_identity())
+
+    try:
+        # 1. Find the alert by its primary key 'id'
+        alert = TamperAlert.query.get(alert_id)
+
+        if not alert:
+            return jsonify({"msg": "Alert not found"}), 404
+        
+        # 2. Authorization Check: Ensure the host owns the BnB
+        bnb = BnB.query.filter_by(id=alert.bnb_id).first()
+        
+        if not bnb or bnb.host_id != host_id:
+            return jsonify({"msg": "Unauthorized to resolve this alert"}), 403
+
+        # 3. Update the status field (using lowercase 'resolved' to match SQL best practice)
+        alert.status = 'resolved'
+        
+        # 4. Commit the change
+        db.session.commit()
+
+        return jsonify({"message": f"Alert {alert_id} resolved successfully"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Database error resolving alert {alert_id}: {e}")
+        return jsonify({"msg": "Internal server error during database update"}), 500
