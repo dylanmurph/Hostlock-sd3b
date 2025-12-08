@@ -9,7 +9,8 @@ import {
 function mapApiAlertsToUI(apiAlerts) {
   return apiAlerts.map((alert) => {
     const alertType = "unauthorized";
-    const status = "Pending";
+    const statusFromDB = alert.status || "pending";
+    const status = statusFromDB.charAt(0).toUpperCase() + statusFromDB.slice(1);
 
     return {
       id: alert.alertId,
