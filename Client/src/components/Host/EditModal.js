@@ -2,25 +2,22 @@ import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 
 const EditModal = ({ modalData, onCancel, onSubmit }) => {
-    const isOpen = !!modalData;
-    const isEdit = modalData?.type === "edit";
+    const isOpen = Boolean(modalData);
     const guest = modalData?.guest || {};
     const type = modalData?.type || "edit";
+    const isEdit = type === "edit";
 
-    // bookingCode for edit, label (nfcId) for fob
-    const initialValue = isEdit ? guest.bookingCode : guest.nfcId || "";
-
-    const [inputValue, setInputValue] = useState(initialValue);
+    const [inputValue, setInputValue] = useState("");
 
     useEffect(() => {
-        if (!modalData) return; // safe inside effect
+        if (!modalData) return;
 
-        const nextValue = isEdit
-            ? modalData.guest.bookingCode
-            : modalData.guest.nfcId || "";
+        const nextValue = type === "edit"
+            ? guest.bookingCode
+            : guest.nfcId || "";
 
         setInputValue(nextValue);
-    }, [modalData, isEdit]);
+    }, [modalData]); // modalData changes → update value
 
     if (!isOpen) return null;
 
@@ -28,15 +25,12 @@ const EditModal = ({ modalData, onCancel, onSubmit }) => {
         ? `Edit Booking for ${guest.name}`
         : `Assign Fob for ${guest.name}`;
 
-    // use label instead of UID wording
     const label = isEdit ? "New Booking Code" : "Fob Label";
     const placeholder = isEdit ? "BK-2025-XXXX" : "e.g., Fob 1";
     const submitText = isEdit ? "Update Booking" : "Assign Fob";
 
     const handleBackdropClick = (e) => {
-        if (e.target.id === "edit-modal-backdrop") {
-            onCancel();
-        }
+        if (e.target.id === "edit-modal-backdrop") onCancel();
     };
 
     const handleSubmit = (e) => {
@@ -52,22 +46,15 @@ const EditModal = ({ modalData, onCancel, onSubmit }) => {
         >
             <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full">
                 <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-lg font-semibold text-slate-800">
-                        {title}
-                    </h3>
-                    <button
-                        onClick={onCancel}
-                        className="text-slate-500 hover:text-slate-800"
-                    >
+                    <h3 className="text-lg font-semibold text-slate-800">{title}</h3>
+                    <button onClick={onCancel} className="text-slate-500 hover:text-slate-800">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="text-sm text-slate-600 mb-1 block">
-                            {label}
-                        </label>
+                        <label className="text-sm text-slate-600 mb-1 block">{label}</label>
                         <input
                             type="text"
                             value={inputValue}
