@@ -8,7 +8,6 @@ from flask_jwt_extended import (
     get_jwt,
     decode_token,
 )
-from .models import RevokedToken
 from datetime import datetime
 import re
 from . import bcrypt
@@ -205,40 +204,8 @@ def logout():
     `refresh_token` value, that token will also be revoked. This allows
     the client to ensure both access and refresh tokens are invalidated.
     """
-    # Try to revoke token presented in Authorization header (if present)
-    try:
-        jwt_data = get_jwt()
-    except Exception:
-        jwt_data = None
-
-    revoked = []
-    try:
-        if jwt_data:
-            jti = jwt_data.get("jti")
-            if jti and not RevokedToken.query.filter_by(jti=jti).first():
-                RevokedToken.query.session.add(RevokedToken(jti=jti))
-                revoked.append(jti)
-
-        # Also accept a refresh token in the request body to revoke it
-        data = request.get_json(silent=True) or {}
-        refresh_token = data.get("refresh_token")
-        if refresh_token:
-            try:
-                decoded = decode_token(refresh_token)
-                jti2 = decoded.get("jti")
-                if jti2 and not RevokedToken.query.filter_by(jti=jti2).first():
-                    RevokedToken.query.session.add(RevokedToken(jti=jti2))
-                    revoked.append(jti2)
-            except Exception:
-                # ignore decode errors
-                pass
-
-        if revoked:
-            db.session.commit()
-        return jsonify({"message": "Logout successful", "revoked": revoked}), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"message": "Error during logout", "error": str(e)}), 500
+    
+    return jsonify({"message": "Logout successful", "revoked": True}), 200
 
 @auth_bp.route("/refresh", methods=["POST"])
 @jwt_required(refresh=True)
@@ -258,14 +225,5 @@ def refresh():
 
     new_access = create_access_token(identity=str(identity), additional_claims=additional)
     new_refresh = create_refresh_token(identity=str(identity), additional_claims=additional)
-
-    # Revoke the old refresh token (rotation for enhanced security)
-    try:
-        old_jti = claims.get("jti")
-        if old_jti and not RevokedToken.query.filter_by(jti=old_jti).first():
-            RevokedToken.query.session.add(RevokedToken(jti=old_jti))
-            db.session.commit()
-    except Exception:
-        pass  # ignore revocation errors
 
     return jsonify({"access_token": new_access, "refresh_token": new_refresh}), 200

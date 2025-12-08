@@ -53,24 +53,8 @@ def create_app():
 
     # Import models
     from .models import (
-        User, BnB, Booking, UserBooking, Fob, FobBooking, AccessLog, TamperAlert, RevokedToken,
+        User, BnB, Booking, UserBooking, Fob, FobBooking, AccessLog, TamperAlert,
     )
-
-    # Register token-in-blocklist callback for JWT revocation
-    @jwt.token_in_blocklist_loader
-    def check_if_token_revoked(jwt_header, jwt_payload):
-        jti = jwt_payload.get("jti")
-        if not jti:
-            return True
-        return RevokedToken.query.filter_by(jti=jti).first() is not None
-
-    with app.app_context():
-        print("Creating database tables (if not already created)...")
-        try:
-            db.create_all()
-            print("Tables created successfully!")
-        except Exception as e:
-            print(f"Error creating tables: {e}")
 
     # ------------------------------------------------------------
     # REGISTER BLUEPRINTS

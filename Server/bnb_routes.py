@@ -81,3 +81,27 @@ def create_bnb():
         "host_id": new_bnb.host_id,
         "message": "BnB created successfully."
     }), 201
+
+@bnb_bp.route("/bnbs/<int:bnb_id>", methods=["DELETE"])
+@jwt_required()
+def delete_bnb(bnb_id):
+    """
+    Delete a BnB. Only the owner (host) can delete it.
+    """
+    host_id = get_jwt_identity()
+    bnb = BnB.query.get(bnb_id)
+    
+    if not bnb:
+        return jsonify({"msg": "BnB not found"}), 404
+    
+    if bnb.host_id != host_id:
+        return jsonify({"msg": "Authorization failed. You can only delete your own properties."}), 403
+    
+    try:
+        db.session.delete(bnb)
+        db.session.commit()
+        return jsonify({"msg": "BnB deleted successfully."}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Database error during BnB deletion: {e}")
+        return jsonify({"msg": "Could not delete BnB due to a database error."}), 500

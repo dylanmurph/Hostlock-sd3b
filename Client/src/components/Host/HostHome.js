@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
-import { AlertTriangle, User, TrendingDown, Bell, Home, Plus, X } from 'lucide-react';
+import { AlertTriangle, User, TrendingDown, Bell, Home, Plus, X, Trash2 } from 'lucide-react';
 
 const API_ENDPOINTS = {
   bookings: '/host/get/bookings',
@@ -31,6 +31,7 @@ const HostHome = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [newBnbName, setNewBnbName] = useState('');
   const [addError, setAddError] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const fetchBnbs = async () => {
     try {
@@ -68,6 +69,25 @@ const HostHome = () => {
       const errorMsg = err.response?.data?.msg || 'Failed to create BnB. Check server logs.';
       setAddError(errorMsg);
       console.error('BnB creation failed:', err);
+    }
+  };
+
+  const handleDeleteBnb = async (bnbId, bnbName) => {
+    if (!window.confirm(`Are you sure you want to delete "${bnbName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingId(bnbId);
+    try {
+      await api.delete(`/bnbs/${bnbId}`);
+      setBnbs((prevBnbs) => prevBnbs.filter((b) => b.id !== bnbId));
+      alert(`Property "${bnbName}" deleted successfully.`);
+    } catch (err) {
+      const errorMsg = err.response?.data?.msg || 'Failed to delete property. Check server logs.';
+      setError(errorMsg);
+      console.error('BnB deletion failed:', err);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -246,9 +266,17 @@ const HostHome = () => {
               bnbs.map((bnb) => (
                 <div
                   key={bnb.id}
-                  className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm font-medium text-blue-800"
+                  className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm font-medium text-blue-800 flex items-center justify-between"
                 >
-                  {bnb.name}
+                  <span>{bnb.name}</span>
+                  <button
+                    onClick={() => handleDeleteBnb(bnb.id, bnb.name)}
+                    disabled={deletingId === bnb.id}
+                    className="ml-2 p-1 text-red-600 hover:bg-red-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Delete property"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               ))
             ) : (
