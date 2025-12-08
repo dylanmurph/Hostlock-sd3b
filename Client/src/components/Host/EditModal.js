@@ -2,25 +2,36 @@ import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 
 const EditModal = ({ modalData, onCancel, onSubmit }) => {
-    const isEdit = modalData?.type === 'edit';
-    const initialValue = isEdit ? modalData?.guest.bookingCode : modalData?.guest.nfcId || '';
+    if (!modalData) return null;
+
+    const isEdit = modalData?.type === "edit";
+    const { type, guest } = modalData;
+
+    // bookingCode for edit, label (nfcId) for fob
+    const initialValue = isEdit
+        ? guest.bookingCode
+        : guest.nfcId || "";
+
     const [inputValue, setInputValue] = useState(initialValue);
 
     useEffect(() => {
-        setInputValue(initialValue);
-    }, [modalData?.guest.id, modalData?.type, initialValue]);
+        const nextValue = isEdit
+            ? modalData?.guest.bookingCode
+            : modalData?.guest.nfcId || "";
+        setInputValue(nextValue);
+    }, [modalData?.guest.id, modalData?.type]);
 
+    const title = isEdit
+        ? `Edit Booking for ${guest.name}`
+        : `Assign Fob for ${guest.name}`;
 
-    if (!modalData) return null;
-
-    const { type, guest } = modalData;
-    const title = isEdit ? `Edit Booking for ${guest.name}` : `Assign Fob for ${guest.name}`;
-    const label = isEdit ? 'New Booking Code' : 'Fob UID (NFC ID)';
-    const placeholder = isEdit ? 'BK-2025-XXXX' : 'e.g., AABBCCDD';
-    const submitText = isEdit ? 'Update Booking' : 'Assign Fob';
+    // 🔁 changed these to use label instead of UID wording
+    const label = isEdit ? "New Booking Code" : "Fob Label";
+    const placeholder = isEdit ? "BK-2025-XXXX" : "e.g., Fob 1";
+    const submitText = isEdit ? "Update Booking" : "Assign Fob";
 
     const handleBackdropClick = (e) => {
-        if (e.target.id === 'edit-modal-backdrop') {
+        if (e.target.id === "edit-modal-backdrop") {
             onCancel();
         }
     };
@@ -31,18 +42,29 @@ const EditModal = ({ modalData, onCancel, onSubmit }) => {
     };
 
     return (
-        <div id="edit-modal-backdrop" className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40" onClick={handleBackdropClick}>
+        <div
+            id="edit-modal-backdrop"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+            onClick={handleBackdropClick}
+        >
             <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full">
                 <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-lg font-semibold text-slate-800">{title}</h3>
-                    <button onClick={onCancel} className="text-slate-500 hover:text-slate-800">
+                    <h3 className="text-lg font-semibold text-slate-800">
+                        {title}
+                    </h3>
+                    <button
+                        onClick={onCancel}
+                        className="text-slate-500 hover:text-slate-800"
+                    >
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="text-sm text-slate-600 mb-1 block">{label}</label>
+                        <label className="text-sm text-slate-600 mb-1 block">
+                            {label}
+                        </label>
                         <input
                             type="text"
                             value={inputValue}

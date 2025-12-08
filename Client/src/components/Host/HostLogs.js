@@ -58,7 +58,6 @@ export function HostLogs() {
         setLoading(true);
         setError(null);
 
-        // matches Flask backend route
         const res = await api.get("/host/access/logs");
 
         const normalised = res.data.map((log, index) => {
@@ -69,6 +68,7 @@ export function HostLogs() {
             time: log.timestamp,
             guestName: log.user || "Unknown",
             property: log.bnbName || "Unknown property",
+            // method removed from UI, but we can still keep it here if needed later
             method: log.method || "Unknown",
             statusRaw: log.status,
             statusCategory: category, // "Success" | "Failed" | "Other"
@@ -204,7 +204,7 @@ export function HostLogs() {
                       <th className="py-2 pr-4">Time</th>
                       <th className="py-2 pr-4">Guest Name</th>
                       <th className="py-2 pr-4">Property</th>
-                      <th className="py-2 pr-4">Method</th>
+                      {/* Method column removed */}
                       <th className="py-2 pr-4">Status</th>
                     </tr>
                   </thead>
@@ -213,25 +213,32 @@ export function HostLogs() {
                     {filteredLogs.map((log) => {
                       const isSuccess = log.statusCategory === "Success";
                       const isFailed = log.statusCategory === "Failed";
+                      const isNoFace =
+                        log.statusRaw &&
+                        String(log.statusRaw).toLowerCase() ===
+                        "granted_no_face";
 
-                      const dotClass = isSuccess
-                        ? "bg-green-500"
-                        : isFailed
-                        ? "bg-red-500"
-                        : "bg-slate-400";
+                      const dotClass = isNoFace
+                        ? "bg-yellow-400"
+                        : isSuccess
+                          ? "bg-green-500"
+                          : isFailed
+                            ? "bg-red-500"
+                            : "bg-slate-400";
 
-                      const badgeClass = isSuccess
-                        ? "bg-emerald-100 text-emerald-700"
-                        : isFailed
-                        ? "bg-red-100 text-red-700"
-                        : "bg-slate-100 text-slate-700";
+                      const badgeClass = isNoFace
+                        ? "bg-yellow-100 text-yellow-700"
+                        : isSuccess
+                          ? "bg-emerald-100 text-emerald-700"
+                          : isFailed
+                            ? "bg-red-100 text-red-700"
+                            : "bg-slate-100 text-slate-700";
 
                       return (
                         <tr key={log.id} className="border-b last:border-none">
                           <td className="py-2 pr-4">{log.time}</td>
                           <td className="py-2 pr-4">{log.guestName}</td>
                           <td className="py-2 pr-4">{log.property}</td>
-                          <td className="py-2 pr-4">{log.method}</td>
                           <td className="py-2 pr-4">
                             <div className="flex items-center gap-2">
                               <span
@@ -257,12 +264,17 @@ export function HostLogs() {
               {filteredLogs.map((log) => {
                 const isSuccess = log.statusCategory === "Success";
                 const isFailed = log.statusCategory === "Failed";
+                const isNoFace =
+                  log.statusRaw &&
+                  String(log.statusRaw).toLowerCase() === "granted_no_face";
 
-                const badgeClass = isSuccess
-                  ? "bg-emerald-100 text-emerald-700"
-                  : isFailed
-                  ? "bg-red-100 text-red-700"
-                  : "bg-slate-100 text-slate-700";
+                const badgeClass = isNoFace
+                  ? "bg-yellow-100 text-yellow-700"
+                  : isSuccess
+                    ? "bg-emerald-100 text-emerald-700"
+                    : isFailed
+                      ? "bg-red-100 text-red-700"
+                      : "bg-slate-100 text-slate-700";
 
                 return (
                   <section
@@ -288,10 +300,6 @@ export function HostLogs() {
                         <div className="flex justify-between">
                           <span className="text-slate-500">Time:</span>
                           <span>{log.time}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-500">Method:</span>
-                          <span>{log.method}</span>
                         </div>
                       </div>
                     </div>

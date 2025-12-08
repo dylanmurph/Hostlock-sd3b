@@ -25,7 +25,7 @@ const GuestNav = () => {
             <div className="max-w-md mx-auto flex justify-between px-6 py-2 text-xs">
                 <NavItem to="/guest/home" label="Home" icon={Home} />
                 <NavItem to="/guest/bookings" label="Bookings" icon={Calendar} />
-                <NavItem to="/guest/alerts" label="Alerts" icon={Bell} showDot />
+                {/* <NavItem to="/guest/alerts" label="Alerts" icon={Bell} showDot /> */}
                 <NavItem to="/guest/settings" label="Settings" icon={Settings} />
             </div>
         </nav>
