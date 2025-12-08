@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timezone
 
+# Assuming .models is correct for your environment
 from .models import db, TamperAlert, BnB, User 
 
 tamper_bp = Blueprint("tamper", __name__)
@@ -11,6 +12,9 @@ tamper_bp = Blueprint("tamper", __name__)
 @tamper_bp.route("/host/get/alerts", methods=["GET"])
 @jwt_required()
 def get_host_alerts():
+    """
+    Fetches all tamper alerts for the current host's BnBs.
+    """
     host_id = int(get_jwt_identity())
 
     # Step 1: Find all BnB IDs associated with the current host
@@ -40,6 +44,8 @@ def get_host_alerts():
             "message": message,
             "eventType": "Tamper Alert", 
             "triggeredAt": alert.triggered_at.strftime("%Y-%m-%d %H:%M:%S"),
+            # ADDITION: Include the status from the database (REQUIRED BY FRONTEND)
+            "status": alert.status,
             # isRead is defaulted as the TamperAlert table does not have this column
             "isRead": False 
         })
@@ -51,7 +57,7 @@ def get_host_alerts():
 @jwt_required()
 def get_tamper_alerts_for_bnb(bnb_id):
     """
-    Returns tamper alerts for a specific BnB ID, for host viewing.
+    Returns tamper alerts for a specific BnB ID.
     """
     host_id = int(get_jwt_identity())
     
@@ -69,46 +75,8 @@ def get_tamper_alerts_for_bnb(bnb_id):
             "alertId": alert.id,
             "message": "Tamper Alert Triggered",
             "triggeredAt": alert.triggered_at.strftime("%Y-%m-%d %H:%M:%S"),
-        })
-
-    return jsonify(data), 200
-
-@tamper_bp.route("/host/get/alerts", methods=["GET"])
-@jwt_required()
-def get_host_alerts():
-    host_id = int(get_jwt_identity())
-
-    # Step 1: Find all BnB IDs associated with the current host
-    hosted_bnbs = BnB.query.filter_by(host_id=host_id).all()
-    if not hosted_bnbs:
-        return jsonify([]), 200
-
-    bnb_ids = [bnb.id for bnb in hosted_bnbs]
-    
-    # Create a quick lookup dictionary for BnB names
-    bnb_name_lookup = {bnb.id: bnb.name for bnb in hosted_bnbs}
-
-    # Step 2: Fetch all TamperAlerts for the host's BnBs
-    alerts = TamperAlert.query.filter(
-        TamperAlert.bnb_id.in_(bnb_ids)
-    ).order_by(TamperAlert.triggered_at.desc()).all()
-
-    # Step 3: Format the data
-    data = []
-    for alert in alerts:
-        message = f"Tamper Alert triggered at the entrance device."
-        
-        data.append({
-            "alertId": alert.id,
-            "bnbId": alert.bnb_id,
-            "bnbName": bnb_name_lookup.get(alert.bnb_id, "Unknown BnB"),
-            "message": message,
-            "eventType": "Tamper Alert", 
-            "triggeredAt": alert.triggered_at.strftime("%Y-%m-%d %H:%M:%S"),
-            # ADDITION: Include the status from the database
-            "status": alert.status,
-            # isRead is defaulted as the TamperAlert table does not have this column
-            "isRead": False 
+            # ADDITION: Status is needed here too for consistent display
+            "status": alert.status, 
         })
 
     return jsonify(data), 200
@@ -134,7 +102,7 @@ def resolve_host_alert(alert_id):
         if not bnb or bnb.host_id != host_id:
             return jsonify({"msg": "Unauthorized to resolve this alert"}), 403
 
-        # 3. Update the status field (using lowercase 'resolved' to match SQL best practice)
+        # 3. Update the status field 
         alert.status = 'resolved'
         
         # 4. Commit the change
