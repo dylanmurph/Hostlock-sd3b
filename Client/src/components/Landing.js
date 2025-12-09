@@ -1,6 +1,5 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import logo from "../logo.svg";
 import api from "../api";
 import { useEffect } from "react";
 
@@ -23,7 +22,7 @@ function Landing() {
 
       {/* Logo */}
       <img 
-        src={logo} 
+        src="/logo192.png"
         alt="HostLock Logo"
         className="w-24 h-24 mb-4 drop-shadow-md"
       />

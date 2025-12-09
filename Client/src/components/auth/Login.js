@@ -3,8 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { Lock, Mail } from "lucide-react";
 import api from "../../api";
 
-import logoImage from "../../logo.svg";
-
 function Login({ setUser }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -77,7 +75,7 @@ function Login({ setUser }) {
         {/* Header */}
         <div className="px-6 pt-6 pb-4 text-center">
           <img
-            src={logoImage}
+            src="/logo192.png"
             alt="HostLock"
             className="h-20 w-auto mx-auto mb-4 object-contain"
           />

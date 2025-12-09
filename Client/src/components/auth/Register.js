@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Building2, UserCircle, Lock, Mail, User, Phone,} from "lucide-react";
 import api from "../../api";
-import logoImage from "../../logo.svg";
 
 function Register() {
   const [role, setRole] = useState("guest"); // "guest" | "host"
@@ -69,7 +68,7 @@ function Register() {
         {/* Header */}
         <div className="px-6 pt-6 pb-4 text-center">
           <img
-            src={logoImage}
+            src="/logo192.png"
             alt="HostLock"
             className="h-20 w-auto mx-auto mb-4 object-contain"
           />
