@@ -42,7 +42,7 @@ export function HostGuests() {
         checkIn: g.checkIn ? g.checkIn.substring(0, 16) : "",
         checkOut: g.checkOut ? g.checkOut.substring(0, 16) : "",
         // fob label from backend
-        nfcId: fobLabel,
+        nfcId: g.fobLabel,
         property: g.bnbName || "",
         status: g.status || "Active",
       }));
