@@ -65,7 +65,7 @@ export function HostGuests() {
   // fetch all possible guests for the dropdown
   const fetchGuestDirectory = async () => {
     try {
-      const res = await api.get("/host/guests");
+      const res = await api.get("/host/guests/data");
       const raw = res.data;
 
       // if backend returns an array or { guests: [...] } or { users: [...] }

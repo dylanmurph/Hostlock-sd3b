@@ -36,7 +36,7 @@ def get_guest_bookings():
 # HOST: GUEST DIRECTORY (for select dropdown)
 # ==============================
 
-@booking_bp.route("/host/guests", methods=["GET"])
+@booking_bp.route("/host/guests/data", methods=["GET"])
 @jwt_required()
 def get_host_guest_directory():
     """
@@ -285,6 +285,7 @@ def create_booking():
                     | (FobBooking.active_from > check_out_time),
                 )
             )
+            .order_by(Fob.id.asc())
             .first()
         )
 
