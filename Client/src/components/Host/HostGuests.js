@@ -66,12 +66,27 @@ export function HostGuests() {
   // fetch all possible guests for the dropdown
   const fetchGuestDirectory = async () => {
     try {
-      // change this route if your backend uses a different one
       const res = await api.get("/host/guests");
-      setGuestDirectory(res.data || []);
+
+      const raw = res.data;
+      let list = [];
+
+      if (Array.isArray(raw)) {
+        // backend returns an array directly
+        list = raw;
+      } else if (Array.isArray(raw.guests)) {
+        // backend returns { guests: [...] }
+        list = raw.guests;
+      } else {
+        // anything else (error object, etc.)
+        console.warn("Unexpected /host/guests response shape:", raw);
+        list = [];
+      }
+
+      setGuestDirectory(list);
     } catch (err) {
       console.error("Failed to load guest directory:", err);
-      // We don't hard-fail the whole page, the select will just be empty.
+      setGuestDirectory([]); // keep it safe for .map
     }
   };
 
@@ -251,9 +266,9 @@ export function HostGuests() {
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg"
                 >
                   <option value="">Select a guest</option>
-                  {guestDirectory.map((g) => (
+                  {(Array.isArray(guestDirectory) ? guestDirectory : []).map((g) => (
                     <option key={g.id} value={g.email}>
-                      {(g.name || g.email) + " (" + g.email + ")"}
+                      {g.name || g.email}
                     </option>
                   ))}
                 </select>
