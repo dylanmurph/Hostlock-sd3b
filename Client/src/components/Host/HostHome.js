@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
-import { AlertTriangle, User, TrendingDown, Bell, Home, Plus, X, Trash2 } from 'lucide-react';
+import { AlertTriangle, User, Bell, Home, Plus, X, Trash2 } from 'lucide-react';
 
 const API_ENDPOINTS = {
     bookings: '/host/get/bookings',
-    accessLogTemplate: (bookingCode) => `/guest/access/${bookingCode}/history`,
     alerts: '/host/get/alerts',
     hostBnbs: '/host/bnbs',
     createBnb: '/bnbs',
@@ -15,7 +14,7 @@ function mapApiAlertsToDashboard(apiAlerts) {
     return apiAlerts.map((alert) => ({
         id: alert.alertId,
         message: `${alert.bnbName}: Tamper Alert triggered.`,
-        status: alert.status || 'Pending', // <- key line
+        status: alert.status || 'Pending',
         time: alert.triggeredAt,
         type: alert.type || 'unauthorized',
     }));
@@ -23,7 +22,6 @@ function mapApiAlertsToDashboard(apiAlerts) {
 
 const HostHome = () => {
     const [guests, setGuests] = useState([]);
-    const [accessLogs, setAccessLogs] = useState([]);
     const [alerts, setAlerts] = useState([]);
     const [bnbs, setBnbs] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -68,7 +66,8 @@ const HostHome = () => {
                 `Property "${res.data.name}" created successfully! Code: ${res.data.unique_code}`,
             );
         } catch (err) {
-            const errorMsg = err.response?.data?.msg || 'Failed to create BnB. Check server logs.';
+            const errorMsg =
+                err.response?.data?.msg || 'Failed to create BnB. Check server logs.';
             setAddError(errorMsg);
             console.error('BnB creation failed:', err);
         }
@@ -89,7 +88,8 @@ const HostHome = () => {
             setBnbs((prevBnbs) => prevBnbs.filter((b) => b.id !== bnbId));
             alert(`Property "${bnbName}" deleted successfully.`);
         } catch (err) {
-            const errorMsg = err.response?.data?.msg || 'Failed to delete property. Check server logs.';
+            const errorMsg =
+                err.response?.data?.msg || 'Failed to delete property. Check server logs.';
             setError(errorMsg);
             console.error('BnB deletion failed:', err);
         } finally {
@@ -115,32 +115,6 @@ const HostHome = () => {
                 const bookingRes = await api.get(API_ENDPOINTS.bookings);
                 const fetchedBookings = bookingRes.data || [];
                 setGuests(fetchedBookings);
-
-                // Access logs per booking
-                const logsPromises = fetchedBookings.map(async (b) => {
-                    if (b.bookingCode) {
-                        try {
-                            const logRes = await api.get(
-                                API_ENDPOINTS.accessLogTemplate(b.bookingCode),
-                            );
-                            return logRes.data.map((log) => ({
-                                bookingCode: b.bookingCode,
-                                status: log.match_result,
-                                timestamp: log.time_logged,
-                            }));
-                        } catch (logErr) {
-                            console.warn(
-                                `Could not fetch logs for booking ${b.bookingCode}:`,
-                                logErr,
-                            );
-                            return [];
-                        }
-                    }
-                    return [];
-                });
-
-                const allLogs = await Promise.all(logsPromises);
-                setAccessLogs(allLogs.flat());
             } catch (err) {
                 console.error('Failed to fetch dashboard data:', err);
                 setError('Could not load all dashboard data. Check API connectivity.');
@@ -164,11 +138,9 @@ const HostHome = () => {
                     new Date(g.check_out_time) > new Date()),
         ).length;
 
-    const failedAttempts = accessLogs.filter((log) => log.status === 'MATCH_FAILURE').length;
-
     // only count alerts whose status is actually pending
     const pendingAlerts = alerts.filter(
-        (a) => String(a.status).toLowerCase() === 'pending'
+        (a) => String(a.status).toLowerCase() === 'pending',
     ).length;
 
     return (
@@ -192,27 +164,11 @@ const HostHome = () => {
                 )}
 
                 {/* 1. Stats cards */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                     <DashboardCard
                         title="Current Guests"
                         value={activeGuests}
                         icon={<User className="w-6 h-6 text-blue-500" />}
-                    />
-                    <DashboardCard
-                        title="Failed Attempts (24h)"
-                        value={failedAttempts}
-                        valueClass="text-red-600"
-                        icon={<TrendingDown className="w-6 h-6 text-red-500" />}
-                    />
-                    <DashboardCard
-                        title="System Status"
-                        value="Online"
-                        valueClass="text-green-700"
-                        icon={
-                            <div className="inline-flex items-center">
-                                <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-2" />
-                            </div>
-                        }
                     />
                     <DashboardCard
                         title="Pending Alerts"
@@ -224,15 +180,15 @@ const HostHome = () => {
 
                 {/* 2. Properties block */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:p-5">
-                    <div className="flex justify-between items-center mb-3">
-                        <h2 className="text-base md:text-lg font-semibold">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                        <h2 className="text-base md:text-lg font-semibold flex items-center">
                             <Home className="inline w-5 h-5 mr-2 text-slate-700" />
-                            Your Properties ({bnbs.length})
+                            <span>Your Properties ({bnbs.length})</span>
                         </h2>
 
                         <button
                             onClick={() => setIsAdding(!isAdding)}
-                            className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors"
+                            className="self-start sm:self-auto flex items-center space-x-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors"
                         >
                             {isAdding ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                             <span>{isAdding ? 'Cancel' : 'Add New Property'}</span>
@@ -247,7 +203,7 @@ const HostHome = () => {
                             <h3 className="text-sm font-semibold mb-2 text-slate-700">
                                 Add Property Details
                             </h3>
-                            <div className="flex gap-2 items-start">
+                            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-start">
                                 <input
                                     type="text"
                                     placeholder="Enter Property Name (e.g., 'Coastal Retreat')"
@@ -271,14 +227,14 @@ const HostHome = () => {
                         </form>
                     )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3">
                         {bnbs.length > 0 ? (
                             bnbs.map((bnb) => (
                                 <div
                                     key={bnb.id}
                                     className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm font-medium text-blue-800 flex items-center justify-between"
                                 >
-                                    <span>{bnb.name}</span>
+                                    <span className="truncate">{bnb.name}</span>
                                     <button
                                         onClick={() => handleDeleteBnb(bnb.id, bnb.name)}
                                         disabled={deletingId === bnb.id}
