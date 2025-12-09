@@ -128,15 +128,7 @@ const HostHome = () => {
 
     if (loading) return <div className="p-4 text-slate-500">Loading dashboard data...</div>;
 
-    const activeGuests =
-        guests.filter(
-            (g) =>
-                g.status === 'Active' ||
-                (g.check_in_time &&
-                    g.check_out_time &&
-                    new Date(g.check_in_time) < new Date() &&
-                    new Date(g.check_out_time) > new Date()),
-        ).length;
+    const activeGuests = guests.filter((g) => g.status === 'Active').length;
 
     // only count alerts whose status is actually pending
     const pendingAlerts = alerts.filter(
