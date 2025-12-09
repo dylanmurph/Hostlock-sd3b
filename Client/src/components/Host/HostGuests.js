@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
 import api from "../../api";
-import { Search, Plus, Edit, Trash2, Key, Users } from "lucide-react";
+import { Search, Plus, Edit, Trash2 } from "lucide-react";
 
 import MessageBanner from "./MessageBanner";
 import ConfirmationModal from "./ConfirmationModal";
 import EditModal from "./EditModal";
-import GuestDetailsModal from "./GuestDetailsModal";
 
 export function HostGuests() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -18,7 +17,6 @@ export function HostGuests() {
   const [message, setMessage] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null);
   const [editModal, setEditModal] = useState(null);
-  const [guestDetailsModal, setGuestDetailsModal] = useState(null);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -43,7 +41,8 @@ export function HostGuests() {
         bookingCode: g.bookingCode || "",
         checkIn: g.checkIn ? g.checkIn.substring(0, 16) : "",
         checkOut: g.checkOut ? g.checkOut.substring(0, 16) : "",
-        nfcId: g.label || "",
+        // fob label from backend
+        nfcId: g.fob_label || g.label || "",
         property: g.bnbName || "",
         status: g.status || "Active",
       }));
@@ -67,26 +66,29 @@ export function HostGuests() {
   const fetchGuestDirectory = async () => {
     try {
       const res = await api.get("/host/guests");
-
       const raw = res.data;
-      let list = [];
 
-      if (Array.isArray(raw)) {
-        // backend returns an array directly
-        list = raw;
-      } else if (Array.isArray(raw.guests)) {
-        // backend returns { guests: [...] }
-        list = raw.guests;
-      } else {
-        // anything else (error object, etc.)
-        console.warn("Unexpected /host/guests response shape:", raw);
-        list = [];
-      }
+      // if backend returns an array or { guests: [...] } or { users: [...] }
+      const baseList =
+        Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.guests)
+            ? raw.guests
+            : Array.isArray(raw?.users)
+              ? raw.users
+              : [];
+
+      // normalise into { id, name, email }
+      const list = baseList.map((g, idx) => ({
+        id: g.id ?? idx,
+        name: g.name || g.email || "Unknown guest",
+        email: g.email || "",
+      }));
 
       setGuestDirectory(list);
     } catch (err) {
       console.error("Failed to load guest directory:", err);
-      setGuestDirectory([]); // keep it safe for .map
+      setGuestDirectory([]);
     }
   };
 
@@ -177,10 +179,6 @@ export function HostGuests() {
     setEditModal({ type, guest });
   };
 
-  const openGuestDetailsModal = (guest) => {
-    setGuestDetailsModal(guest);
-  };
-
   const handleModalSubmit = async (bookingId, type, value) => {
     setEditModal(null);
 
@@ -203,8 +201,7 @@ export function HostGuests() {
 
       showMessage({
         type: "success",
-        text: `${type === "edit" ? "Booking Code" : "Fob UID"
-          } updated successfully!`,
+        text: `${type === "edit" ? "Booking Code" : "Fob UID"} updated successfully!`,
       });
       await refreshGuests();
     } catch (err) {
@@ -228,7 +225,6 @@ export function HostGuests() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <main className="flex-1 p-4 md:p-6 space-y-4 md:space-y-6">
-        {/* 1. MESSAGE BANNER */}
         <MessageBanner
           message={message}
           onClose={() => setMessage(null)}
@@ -266,9 +262,9 @@ export function HostGuests() {
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg"
                 >
                   <option value="">Select a guest</option>
-                  {(Array.isArray(guestDirectory) ? guestDirectory : []).map((g) => (
+                  {guestDirectory.map((g) => (
                     <option key={g.id} value={g.email}>
-                      {g.name || g.email}
+                      {g.name}
                     </option>
                   ))}
                 </select>
@@ -355,7 +351,7 @@ export function HostGuests() {
           </div>
         </section>
 
-        {/* Guests Cards (Mobile View) */}
+        {/* Guests Cards (mobile) */}
         <div className="md:hidden space-y-3">
           <div className="text-sm text-slate-600 px-1">
             {filteredGuests.length} bookings found
@@ -405,37 +401,22 @@ export function HostGuests() {
                       <span>{guest.property}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Fob ID:</span>
-                      <span>{guest.nfcId || "N/A"}</span>
+                      <span className="text-slate-500">Fob:</span>
+                      <span>{guest.nfcId || "No fob"}</span>
                     </div>
                   </div>
 
-                  {/* Action buttons */}
-                  <div className="grid grid-cols-4 gap-2 pt-2">
+                  <div className="grid grid-cols-2 gap-2 pt-2">
                     <button
                       onClick={() => openEditModal(guest, "edit")}
-                      className="col-span-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-xs hover:bg-slate-50"
+                      className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-xs hover:bg-slate-50"
                     >
                       <Edit className="w-4 h-4" />
                       Edit
                     </button>
                     <button
-                      onClick={() => openEditModal(guest, "fob")}
-                      className="col-span-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-xs hover:bg-slate-50"
-                    >
-                      <Key className="w-4 h-4" />
-                      Fob
-                    </button>
-                    <button
-                      onClick={() => openGuestDetailsModal(guest)}
-                      className="col-span-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border border-indigo-200 text-xs text-indigo-600 hover:bg-indigo-50"
-                    >
-                      <Users className="w-4 h-4" />
-                      Guests
-                    </button>
-                    <button
                       onClick={() => confirmDelete(guest.id)}
-                      className="col-span-1 inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-red-200 text-xs text-red-600 hover:bg-red-50"
+                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-red-200 text-xs text-red-600 hover:bg-red-50"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -445,8 +426,6 @@ export function HostGuests() {
             );
           })}
         </div>
-
-        {/* Desktop table omitted, same data logic if you add it */}
       </main>
 
       <ConfirmationModal
@@ -459,13 +438,6 @@ export function HostGuests() {
         modalData={editModal}
         onCancel={() => setEditModal(null)}
         onSubmit={handleModalSubmit}
-      />
-
-      <GuestDetailsModal
-        booking={guestDetailsModal}
-        onCancel={() => setGuestDetailsModal(null)}
-        refreshParentData={refreshGuests}
-        showMessage={showMessage}
       />
     </div>
   );
