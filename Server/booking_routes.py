@@ -32,6 +32,42 @@ def get_guest_bookings():
     ]
     return jsonify(data), 200
 
+# ==============================
+# HOST: GUEST DIRECTORY (for select dropdown)
+# ==============================
+
+@booking_bp.route("/host/guests", methods=["GET"])
+@jwt_required()
+def get_host_guest_directory():
+    """
+    Return a simple directory of all guest users
+    (id, name, email) so hosts can pick from a dropdown.
+    """
+    host_id = int(get_jwt_identity())
+
+    # Optional: only allow hosts / admins to call this
+    host = User.query.get(host_id)
+    if not host or host.role not in [UserRole.HOST, UserRole.ADMIN]:
+        return jsonify({"error": "Not authorized"}), 403
+
+    guests = (
+        User.query
+        .filter_by(role=UserRole.GUEST)
+        .order_by(User.name.asc())
+        .all()
+    )
+
+    data = [
+        {
+            "id": g.id,
+            "name": g.name,
+            "email": g.email,
+        }
+        for g in guests
+    ]
+
+    return jsonify(data), 200
+
 # HOST BOOKINGS
 
 @booking_bp.route("/host/get/bookings", methods=["GET"])
@@ -52,15 +88,17 @@ def get_host_bookings():
             check_out = booking.check_out_time.replace(tzinfo=timezone.utc) if booking.check_out_time.tzinfo is None else booking.check_out_time
 
             # Determine status
-            status = ("Active" if check_in <= now <= check_out else 
-                      "Upcoming" if now < check_in else 
-                      "Checked Out")
-            
+            status = (
+                "Active" if check_in <= now <= check_out else
+                "Upcoming" if now < check_in else
+                "Checked Out"
+            )
+
             fob_uid = None
             fob_label = None
             if booking.fob_links:
-                fob_booking_link = booking.fob_links[0] 
-                fob = fob_booking_link.fob 
+                fob_booking_link = booking.fob_links[0]
+                fob = fob_booking_link.fob
                 fob_uid = fob.uid
                 fob_label = fob.label
 
@@ -136,7 +174,7 @@ def create_booking():
     email = data.get("email")
     booking_code = data.get("bookingCode")
     check_in = data.get("checkIn")
-    check_out = data.get("checkOut")
+    check_out = data.get("CheckOut") if data.get("CheckOut") else data.get("checkOut")
     property_id = data.get("property") 
 
     # 1. Missing Fields Check (400)
@@ -186,7 +224,12 @@ def create_booking():
 
     # 8. Booking Creation and Fob Assignment
     try:
-        booking = Booking(bnb=bnb, booking_code=booking_code, check_in_time=check_in_time, check_out_time=check_out_time)
+        booking = Booking(
+            bnb=bnb,
+            booking_code=booking_code,
+            check_in_time=check_in_time,
+            check_out_time=check_out_time
+        )
         db.session.add(booking)
         db.session.commit()
 
@@ -204,7 +247,13 @@ def create_booking():
 
         fob_uid = None
         if fob:
-            fob_booking = FobBooking(fob=fob, booking=booking, active_from=check_in_time, active_until=check_out_time, is_active=True)
+            fob_booking = FobBooking(
+                fob=fob,
+                booking=booking,
+                active_from=check_in_time,
+                active_until=check_out_time,
+                is_active=True
+            )
             db.session.add(fob_booking)
             db.session.commit()
             fob_uid = fob.uid
@@ -254,10 +303,16 @@ def assign_fob_to_booking(booking_id):
 
     # Create new FobBooking link
     try:
-        fob_booking = FobBooking(fob=fob, booking=booking, active_from=booking.check_in_time, active_until=booking.check_out_time, is_active=True)
+        fob_booking = FobBooking(
+            fob=fob,
+            booking=booking,
+            active_from=booking.check_in_time,
+            active_until=booking.check_out_time,
+            is_active=True
+        )
         db.session.add(fob_booking)
         db.session.commit()
-    except Exception as e:
+    except Exception:
         db.session.rollback()
         return jsonify({"error": "Database error during Fob assignment."}), 500
     
@@ -319,7 +374,7 @@ def add_guest_to_booking(booking_id):
         db.session.commit()
     except Exception:
         db.session.rollback()
-        return jsonify({"error": "Database error during guest linking."}), 500
+        return jsonify({"error": "Database error during guest removal."}), 500
 
     return jsonify({"message": "Secondary guest added successfully.", "guestId": guest.id, "email": guest.email}), 200
 
@@ -400,19 +455,13 @@ def delete_booking(booking_id):
         return jsonify({"error": f"Booking ID '{booking_id}' not found."}), 404
 
     # 2. Authorization Check
-    # Only the host of the property can delete the booking
     if booking.bnb.host_id != host_id:
         return jsonify({"error": "Authorization failed. User is not the host of this property."}), 403
     
     try:
         # 3. Cleanup Linked Tables (Crucial Step)
-        # Delete all UserBooking links for this booking
         UserBooking.query.filter_by(booking_id=booking_id).delete()
-        
-        # Delete all FobBooking links for this booking
         FobBooking.query.filter_by(booking_id=booking_id).delete()
-        
-        # 4. Delete the Booking itself
         db.session.delete(booking)
         db.session.commit()
         
