@@ -19,6 +19,7 @@ function mapApiAlertsToUI(apiAlerts) {
       status: status,
       type: alertType,
       bnbId: alert.bnbId,
+      snapshot: alert.snapshot,
     };
   });
 }
@@ -60,35 +61,35 @@ export function HostAlerts() {
     fetchHostAlerts();
   }, []);
 
- // Function to handle marking an alert as resolved
-const handleMarkResolved = async (alertId) => {
-  // Add a small local status indicator if you want, but focus on the API call
-  try {
-    // 1. Send API request to resolve the alert
-    // Use the alertId to target the specific database entry
-    const res = await api.put(`/host/alerts/resolve/${alertId}`);
+  // Function to handle marking an alert as resolved
+  const handleMarkResolved = async (alertId) => {
+    // Add a small local status indicator if you want, but focus on the API call
+    try {
+      // 1. Send API request to resolve the alert
+      // Use the alertId to target the specific database entry
+      const res = await api.put(`/host/alerts/resolve/${alertId}`);
 
-    // 2. Check for success (e.g., status 200 or 204)
-    if (res.status === 200 || res.status === 204) {
-      // 3. ONLY update the local state if the API call was successful
-      setAlerts((prev) =>
-        prev.map((a) =>
-          a.id === alertId
-            ? {
-                ...a,
-                status: "Resolved",
-              }
-            : a
-        )
-      );
-      // Optional: Add a success message notification here
+      // 2. Check for success (e.g., status 200 or 204)
+      if (res.status === 200 || res.status === 204) {
+        // 3. ONLY update the local state if the API call was successful
+        setAlerts((prev) =>
+          prev.map((a) =>
+            a.id === alertId
+              ? {
+                  ...a,
+                  status: "Resolved",
+                }
+              : a
+          )
+        );
+        // Optional: Add a success message notification here
+      }
+    } catch (err) {
+      console.error("Error marking alert as resolved:", err.response || err.message);
+      // Notify the user of the failure
+      alert("Failed to mark alert as resolved. Please try again.");
     }
-  } catch (err) {
-    console.error("Error marking alert as resolved:", err.response || err.message);
-    // Notify the user of the failure
-    alert("Failed to mark alert as resolved. Please try again.");
-  }
-};
+  };
 
   // Loading and Error States
   if (loading) {
@@ -199,16 +200,30 @@ const handleMarkResolved = async (alertId) => {
                   </div>
 
                   <div className="px-4 py-3">
-                    <div className="flex flex-col md:flex-row gap-2">
-                      {alert.status === "Pending" && (
-                        <button
-                          onClick={() => handleMarkResolved(alert.id)}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-xs hover:bg-slate-50"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                          Mark as Resolved
-                        </button>
+                    <div className="flex flex-col gap-3">
+                      {/* Image Display Block */}
+                      {alert.snapshot && (
+                        <div className="w-full max-w-xs">
+                          <img
+                            src={alert.snapshot}
+                            alt={`Snapshot for alert ${alert.id}`}
+                            className="w-full h-auto max-h-40 object-cover rounded-lg border border-slate-200 shadow-sm"
+                          />
+                        </div>
                       )}
+
+                      {/* Original Action Buttons */}
+                      <div className="flex flex-col md:flex-row gap-2">
+                        {alert.status === "Pending" && (
+                          <button
+                            onClick={() => handleMarkResolved(alert.id)}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-xs hover:bg-slate-50"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            Mark as Resolved
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </section>

@@ -3,11 +3,17 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timezone
 
 # Assuming .models is correct for your environment
-from .models import db, TamperAlert, BnB, User 
+from .models import db, TamperAlert, BnB, User
 
 tamper_bp = Blueprint("tamper", __name__)
 
-# HOST ALERTS ROUTES (Uses TamperAlert Model) 
+
+def _get_adjusted_snapshot_path(path):
+    if path and 'uploads/tampers' in path:
+        return path[path.find('/uploads/'):]
+
+    return path
+
 
 @tamper_bp.route("/host/get/alerts", methods=["GET"])
 @jwt_required()
@@ -36,18 +42,20 @@ def get_host_alerts():
     data = []
     for alert in alerts:
         message = f"Tamper Alert triggered at the entrance device."
-        
+
+        snapshot_path = _get_adjusted_snapshot_path(alert.snapshot_path)
+
         data.append({
             "alertId": alert.id,
             "bnbId": alert.bnb_id,
             "bnbName": bnb_name_lookup.get(alert.bnb_id, "Unknown BnB"),
             "message": message,
-            "eventType": "Tamper Alert", 
+            "eventType": "Tamper Alert",
             "triggeredAt": alert.triggered_at.strftime("%Y-%m-%d %H:%M:%S"),
             # ADDITION: Include the status from the database (REQUIRED BY FRONTEND)
             "status": alert.status,
-            # isRead is defaulted as the TamperAlert table does not have this column
-            "isRead": False 
+            "isRead": False,
+            "snapshot": snapshot_path
         })
 
     return jsonify(data), 200
@@ -71,12 +79,13 @@ def get_tamper_alerts_for_bnb(bnb_id):
     
     data = []
     for alert in alerts:
+        snapshot_path = _get_adjusted_snapshot_path(alert.snapshot_path)
         data.append({
             "alertId": alert.id,
             "message": "Tamper Alert Triggered",
             "triggeredAt": alert.triggered_at.strftime("%Y-%m-%d %H:%M:%S"),
-            # ADDITION: Status is needed here too for consistent display
-            "status": alert.status, 
+            "status": alert.status,
+            "snapshot": snapshot_path
         })
 
     return jsonify(data), 200

@@ -96,10 +96,14 @@ def get_host_bookings():
         return jsonify([]), 200
 
     now = datetime.now(timezone.utc)
-    data = []
+    unique_bookings_data = {}
 
     for bnb in bnbs:
         for booking in bnb.bookings:
+
+            if booking.id in unique_bookings_data:
+                continue
+
             check_in = (
                 booking.check_in_time.replace(tzinfo=timezone.utc)
                 if booking.check_in_time.tzinfo is None
@@ -126,31 +130,53 @@ def get_host_bookings():
                 fob = fob_booking_link.fob
                 fob_uid = fob.uid
                 fob_label = fob.label
+                
+            guests_list = []
+            primary_guest_info = {"guestId": None, "guestName": "N/A", "email": "N/A", "isPrimaryGuest": False}
 
             for user_booking in booking.user_links:
                 guest = user_booking.user
-                data.append(
-                    {
-                        "guestId": guest.id,
-                        "guestName": guest.name,
-                        "email": guest.email,
-                        "bookingCode": booking.booking_code,
-                        "checkIn": check_in.strftime("%Y-%m-%d"),
-                        "checkInTime": check_in.strftime("%H:%M"),
-                        "checkOut": check_out.strftime("%Y-%m-%d"),
-                        "checkOutTime": check_out.strftime("%H:%M"),
-                        "bnbId": bnb.id,
-                        "bnbName": bnb.name,
-                        "isPrimaryGuest": user_booking.is_primary_guest,
-                        "status": status,
-                        "fobUID": fob_uid,
-                        "bookingId": booking.id,
-                        "fobLabel": fob_label,
-                    }
-                )
 
-    return jsonify(data), 200
+                guest_data = {
+                    "guestId": guest.id,
+                    "guestName": guest.name,
+                    "email": guest.email,
+                    "isPrimaryGuest": user_booking.is_primary_guest,
+                }
 
+                guests_list.append(guest_data)
+
+                # Capture the primary guest info to match the original flat structure fields
+                if user_booking.is_primary_guest:
+                    primary_guest_info = guest_data
+
+            # --- Create the FINAL record (Once per Booking) ---
+            record = {
+                # Primary guest fields for front-end compatibility
+                "guestId": primary_guest_info["guestId"],
+                "guestName": primary_guest_info["guestName"],
+                "email": primary_guest_info["email"],
+                "isPrimaryGuest": primary_guest_info["isPrimaryGuest"],
+
+                # Booking details
+                "bookingCode": booking.booking_code,
+                "checkIn": check_in.strftime("%Y-%m-%d"),
+                "checkInTime": check_in.strftime("%H:%M"),
+                "checkOut": check_out.strftime("%Y-%m-%d"),
+                "checkOutTime": check_out.strftime("%H:%M"),
+                "bnbId": bnb.id,
+                "bnbName": bnb.name,
+                "status": status,
+                "fobUID": fob_uid,
+                "bookingId": booking.id,
+                "fobLabel": fob_label,
+
+                "guests_list": guests_list
+            }
+
+            unique_bookings_data[booking.id] = record
+
+    return jsonify(list(unique_bookings_data.values())), 200
 
 # PROFILE IMAGE MANAGEMENT
 
@@ -235,29 +261,7 @@ def create_booking():
             jsonify({"error": f"User {email} has a non-guest role and cannot be booked."}),
             403,
         )
-
-    conflicting_bookings = (
-        db.session.query(Booking)
-        .join(UserBooking)
-        .filter(
-            UserBooking.user_id == user.id,
-            (Booking.check_in_time < check_out_time)
-            & (Booking.check_out_time > check_in_time),
-        )
-        .all()
-    )
-
-    if conflicting_bookings:
-        conflict_codes = [b.booking_code for b in conflicting_bookings]
-        return (
-            jsonify(
-                {
-                    "error": f"Guest has conflicting reservation(s): {', '.join(conflict_codes)}."
-                }
-            ),
-            409,
-        )
-
+        
     bnb = BnB.query.get(property_id)
     if not bnb:
         return jsonify({"error": "Property not found."}), 404
@@ -276,18 +280,11 @@ def create_booking():
         db.session.add(user_booking)
         db.session.commit()
 
-        fob = (
-            Fob.query.outerjoin(FobBooking)
-            .filter(
-                or_(
-                    FobBooking.id == None,
-                    (FobBooking.active_until < check_in_time)
-                    | (FobBooking.active_from > check_out_time),
-                )
-            )
-            .order_by(Fob.id.asc())
-            .first()
-        )
+        # --- Simplified FOB Assignment Logic (from last step) ---
+        assigned_fob_ids = db.session.query(FobBooking.fob_id).distinct().all()
+        assigned_ids = [id_[0] for id_ in assigned_fob_ids]
+
+        fob = Fob.query.filter(Fob.id.notin_(assigned_ids)).order_by(Fob.id.asc()).first()
 
         fob_uid = None
         if fob:
@@ -301,6 +298,8 @@ def create_booking():
             db.session.add(fob_booking)
             db.session.commit()
             fob_uid = fob.uid
+        else:
+            print("WARNING: All Fobs are currently assigned to bookings.")
 
     except Exception:
         db.session.rollback()
@@ -627,16 +626,30 @@ def cancel_guest_booking(booking_code):
     if not link:
         return jsonify({"error": "You are not linked to this booking"}), 404
 
-    if booking.user_links.count() > 1:
+    try:
+        if booking.user_links.count() > 1:
+            # Case 1: Multiple guests remain. Only remove the current user's link.
+            db.session.delete(link)
+            db.session.commit()
+            return jsonify({"message": "You have been removed from this booking"}), 200
+
+        # Case 2: This is the last guest. Delete the entire booking and its links.
+
+        # 1. Delete all associated Fob links
+        for fb in list(booking.fob_links):
+            db.session.delete(fb)
+
+        # 2. Delete the user link (the current user)
         db.session.delete(link)
-        db.session.commit()
-        return jsonify({"message": "You have been removed from this booking"}), 200
 
-    for fb in list(booking.fob_links):
-        db.session.delete(fb)
+        # 3. Delete the main Booking object
+        db.session.delete(booking)
 
-    db.session.delete(link)
-    db.session.delete(booking)
-    db.session.commit()
+        db.session.commit() # Commit the full deletion
+
+    except Exception as e:
+        db.session.rollback()
+        # You may want to log 'e' here for debugging
+        return jsonify({"error": "Server error during booking cancellation. Transaction rolled back."}), 500
 
     return jsonify({"message": "Booking cancelled"}), 200

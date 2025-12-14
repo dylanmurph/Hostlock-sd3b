@@ -70,8 +70,9 @@ export function HostLogs() {
             property: log.bnbName || "Unknown property",
             // method removed from UI, but we can still keep it here if needed later
             method: log.method || "Unknown",
+            snapshotPath: log.snapshot,
             statusRaw: log.status,
-            statusCategory: category, // "Success" | "Failed" | "Other"
+            statusCategory: category, 
             statusLabel: label,
           };
         });
@@ -206,6 +207,7 @@ export function HostLogs() {
                       <th className="py-2 pr-4">Property</th>
                       {/* Method column removed */}
                       <th className="py-2 pr-4">Status</th>
+                      <th className="py-2 pr-4">Snapshot</th>
                     </tr>
                   </thead>
 
@@ -216,7 +218,7 @@ export function HostLogs() {
                       const isNoFace =
                         log.statusRaw &&
                         String(log.statusRaw).toLowerCase() ===
-                        "granted_no_face";
+                          "granted_no_face";
 
                       const dotClass = isNoFace
                         ? "bg-yellow-400"
@@ -251,6 +253,18 @@ export function HostLogs() {
                               </span>
                             </div>
                           </td>
+                          <td className="py-2 pr-4">
+                            {log.snapshotPath &&
+                              !log.snapshotPath.startsWith('/uploads/error_') ? (
+                              <img
+                                src={log.snapshotPath}
+                                alt={`Snapshot for ${log.guestName}`}
+                                className="w-12 h-auto rounded-md object-cover"
+                              />
+                            ) : (
+                              <span className="text-xs text-slate-400">N/A</span>
+                            )}
+                          </td>
                         </tr>
                       );
                     })}
@@ -282,6 +296,15 @@ export function HostLogs() {
                     className="bg-white rounded-2xl border border-slate-200 shadow-sm"
                   >
                     <div className="px-4 py-4 space-y-3">
+                      {log.snapshotPath &&
+                        !log.snapshotPath.startsWith('/uploads/error_') && (
+                        <img
+                          src={log.snapshotPath}
+                          alt={`Snapshot for ${log.guestName}`}
+                          className="w-full h-auto max-h-32 rounded-md object-cover mb-3"
+                        />
+                      )}
+
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="text-sm font-medium">{log.guestName}</p>

@@ -120,32 +120,42 @@ export function GuestSettings({ onLogout }) {
     setPreviewUrl(URL.createObjectURL(file));
   };
 
-  const uploadImage = async () => {
-    if (!selectedImage) return alert("No image selected.");
+const uploadImage = async () => {
+    if (!selectedImage) return alert("Please select an image first.");
 
     const formData = new FormData();
     formData.append("image", selectedImage);
 
     try {
-      const res = await api.post("/booking/uploadImage", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+        setSavingProfile(true); 
+        setProfileError(null);
+        setProfileSuccess(null);
 
-      const photoUrl = `https://www.hostlocksd3b.online/${res.data.file}`;
-      setPreviewUrl(photoUrl);
+        const res = await api.post("/booking/uploadImage", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
 
-      const userStr = localStorage.getItem("user");
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        user.photo = photoUrl;
-        user.photo_path = res.data.file;
-        localStorage.setItem("user", JSON.stringify(user));
-      }
+        const photoUrl = `https://www.hostlocksd3b.online/${res.data.file}`;
+        setPreviewUrl(photoUrl);
+        setSelectedImage(null); 
 
-      alert("Profile image updated!");
+        const userStr = localStorage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          user.photo = photoUrl;
+          user.photo_path = res.data.file;
+          localStorage.setItem("user", JSON.stringify(user));
+        }
+
+        setProfileSuccess("Profile image updated successfully!"); 
+        alert("Profile image updated successfully!");
+
     } catch (err) {
-      console.error("Upload error:", err.response || err);
-      alert("Failed to upload image.");
+        console.error("Upload error:", err.response || err);
+        setProfileError("Failed to upload image. Please try again.");
+        alert("Failed to upload image.");
+    } finally {
+        setSavingProfile(false);
     }
   };
 
