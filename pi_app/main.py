@@ -241,12 +241,19 @@ def deny_access():
     
 
 # ----------------------
-# Listener Access Decisions
+# Listener Access Decisions + Heartbeat
 # ----------------------
 class MyListener(SubscribeCallback):
-    """Listens for server messages, primarily access decisions."""
+    """Listens for server messages and handles them."""
     def message(self, pubnub, message):
         msg = message.message
+        print(f"Received message: {msg}")
+        
+        #Handle Heartbeat Requests
+        if msg.get("type") == "heartbeat_request":
+            print("Heartbeat request- sending response...")
+            self.send_heartbeat()
+            
         #Handle Access Decisions
         if "access" in msg:
             print(f"Server decision received: {msg['access']}")
@@ -256,6 +263,19 @@ class MyListener(SubscribeCallback):
                 grant_access_no_face()
             else:
                 deny_access()
+    
+    def send_heartbeat(self):
+        response = {
+            "type": "heartbeat_response",
+            "message": "Pi is online",
+            "timestamp": time.time()
+        }
+
+        try:
+            pubnub.publish().channel(CHANNEL).message(response).sync()
+            print("Sent heartbeat to server.")
+        except Exception as e:
+            print(f"Error sending heartbeat to server: {e}")
 
 pubnub.add_listener(MyListener())
 pubnub.subscribe().channels(CHANNEL).execute()
