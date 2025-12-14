@@ -14,6 +14,7 @@ load_dotenv()
 from pubnub.pnconfiguration import PNConfiguration
 from pubnub.pubnub import PubNub
 from pubnub.callbacks import SubscribeCallback
+from pubnub.crypto import AesCbcCryptoModule
 
 # ----------------------
 # ENV VARIABLES
@@ -21,6 +22,7 @@ from pubnub.callbacks import SubscribeCallback
 PUBLISH_KEY = os.getenv("PUBNUB_PUBLISH_KEY")
 SUBSCRIBE_KEY = os.getenv("PUBNUB_SUBSCRIBE_KEY")
 CHANNEL = os.getenv("PUBNUB_CHANNEL")
+CIPHER_KEY = os.getenv("PUBNUB_CIPHER_KEY")
 
 AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY")
 AWS_SECRET_KEY = os.getenv("AWS_SECRET_KEY")
@@ -66,6 +68,9 @@ pnconfig.publish_key = PUBLISH_KEY
 pnconfig.subscribe_key = SUBSCRIBE_KEY
 pnconfig.user_id = "pi-nfc"
 pnconfig.enable_subscribe = True
+
+pnconfig.cipher_key = CIPHER_KEY
+pnconfig.crypto_module = AesCbcCryptoModule(pnconfig)
 
 pubnub = PubNub(pnconfig)
 
