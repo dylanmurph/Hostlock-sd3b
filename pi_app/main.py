@@ -85,11 +85,27 @@ GPIO.setup(LED_RED, GPIO.OUT)
 GPIO.setup(LED_YEL, GPIO.OUT)
 GPIO.setup(LED_GRN, GPIO.OUT)
 GPIO.setup(BUZZ, GPIO.OUT)
+buzzer_pwm = GPIO.PWM(BUZZ, 3000) 
+buzzer_pwm_started = False
 
 GPIO.setup(TAMP, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 GPIO.output(LED_RED, True)  #Default state: Red ON
 RELAY.on() #Door locked 
+
+def buzzer_on(freq=3000, duty=50):
+    global buzzer_pwm_started
+    buzzer_pwm.ChangeFrequency(freq)
+    if not buzzer_pwm_started:
+        buzzer_pwm.start(duty)
+        buzzer_pwm_started = True
+    else:
+        buzzer_pwm.ChangeDutyCycle(duty)
+
+def buzzer_off():
+    global buzzer_pwm_started
+    if buzzer_pwm_started:
+        buzzer_pwm.ChangeDutyCycle(0)
 
 # ----------------------
 # PN532 NFC Reader
@@ -133,8 +149,7 @@ def reset_tamper_alarm():
     GPIO.output(LED_RED, True)
     GPIO.output(LED_YEL, False)
     GPIO.output(LED_GRN, False)
-    GPIO.output(BUZZ, False)
-    
+    buzzer_off()
     RELAY.on()
 
 
@@ -149,17 +164,19 @@ def handle_tamper():
     for _ in range(10):
         GPIO.output(LED_RED, True)
         GPIO.output(LED_YEL, False)
-        GPIO.output(BUZZ, True)
+        buzzer_on(freq=3000, duty=50)
         time.sleep(0.1)
         GPIO.output(LED_RED, False)
         GPIO.output(LED_YEL, True)
-        GPIO.output(BUZZ, False)
+       
+        buzzer_off()
         time.sleep(0.1)
         
     GPIO.output(LED_RED, True)
     GPIO.output(LED_YEL, False)
     GPIO.output(LED_GRN, False)
-    GPIO.output(BUZZ, False)
+    
+    buzzer_off()
     
     img_path, img_name = take_photo("TAMPER")
 
@@ -194,10 +211,12 @@ def grant_access_no_face():
     
     GPIO.output(LED_RED, False)
     GPIO.output(LED_GRN, True)
+    buzzer_on(freq=3000, duty=50)
     RELAY.off()
     for _ in range(3):
         GPIO.output(LED_YEL, True); time.sleep(0.3)
         GPIO.output(LED_YEL, False); time.sleep(0.3)
+    buzzer_off()
     time.sleep(2)
     GPIO.output(LED_GRN, False)
     GPIO.output(LED_RED, True)
@@ -208,13 +227,13 @@ def deny_access():
     GPIO.output(LED_YEL, False)
     for _ in range(3):
         GPIO.output(LED_RED, True); time.sleep(0.3)
+        buzzer_on(freq=3000, duty=50)
         GPIO.output(LED_RED, False); time.sleep(0.3)
+        buzzer_off()
     
     GPIO.output(LED_GRN, False)
     GPIO.output(LED_RED, True)
-    GPIO.output(BUZZ, True)
-    time.sleep(1)
-    GPIO.output(BUZZ, False)
+    
 
 # ----------------------
 # Listener Access Decisions
@@ -267,9 +286,9 @@ try:
             GPIO.output(LED_YEL, True)
             
             # Flash yellow + beep
-            GPIO.output(BUZZ, True)
+            buzzer_on(freq=4000, duty=50)
             time.sleep(1)
-            GPIO.output(BUZZ, False)
+            buzzer_off()
 
             # Take photo
             img_path, img_name = take_photo(uid_hex)
@@ -285,5 +304,7 @@ try:
         time.sleep(0.1)
 
 except KeyboardInterrupt:
+    buzzer_off()
+    buzzer_pwm.stop()
     GPIO.cleanup()
     print("Exiting cleanly...")
